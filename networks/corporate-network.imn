@@ -1,0 +1,432 @@
+node n1 {
+    type router
+    model router
+    network-config {
+        hostname fw-external
+        !
+        interface eth0
+            ip address 203.0.113.1/24
+        !
+        interface eth1
+            ip address 10.100.1.1/24
+        !
+        interface eth2
+            ip address 10.100.2.1/24
+        !
+        interface eth3
+            ip address 10.100.3.1/24
+        !
+    }
+    canvas c1
+    iconcoords {400.0 100.0}
+    labelcoords {400.0 132.0}
+    services {IPForward DefaultRoute}
+    custom-config {
+        custom-config-id service:IPForward
+        custom-command IPForward
+        config {
+            files=('ipforward.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:IPForward:ipforward.sh
+        custom-command ipforward.sh
+        config {
+            #!/bin/sh
+            # Enable IP forwarding
+            sysctl -w net.ipv4.ip_forward=1
+
+            # Firewall rules - DMZ to Internal restricted
+            iptables -P FORWARD DROP
+            iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 80 -j ACCEPT
+            iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 443 -j ACCEPT
+            iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 25 -j ACCEPT
+            iptables -A FORWARD -i eth1 -o eth0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+            # DMZ to DB restricted
+            iptables -A FORWARD -i eth1 -o eth3 -p tcp --dport 3306 -j ACCEPT
+            iptables -A FORWARD -i eth3 -o eth1 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+            # Internal to DMZ allowed
+            iptables -A FORWARD -i eth2 -o eth1 -j ACCEPT
+            iptables -A FORWARD -i eth1 -o eth2 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+            # Internal to DB allowed
+            iptables -A FORWARD -i eth2 -o eth3 -j ACCEPT
+            iptables -A FORWARD -i eth3 -o eth2 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+            # NAT for outbound
+            iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+        }
+    }
+}
+
+node n2 {
+    type lanswitch
+    network-config {
+        hostname sw-dmz
+        !
+    }
+    canvas c1
+    iconcoords {400.0 200.0}
+    labelcoords {400.0 232.0}
+}
+
+node n3 {
+    type lanswitch
+    network-config {
+        hostname sw-internal
+        !
+    }
+    canvas c1
+    iconcoords {200.0 300.0}
+    labelcoords {200.0 332.0}
+}
+
+node n4 {
+    type lanswitch
+    network-config {
+        hostname sw-database
+        !
+    }
+    canvas c1
+    iconcoords {600.0 300.0}
+    labelcoords {600.0 332.0}
+}
+
+node n5 {
+    type router
+    model host
+    network-config {
+        hostname web-server
+        !
+        interface eth0
+            ip address 10.100.1.10/24
+        !
+    }
+    canvas c1
+    iconcoords {300.0 200.0}
+    labelcoords {300.0 232.0}
+    services {DefaultRoute SSH HTTP}
+    custom-config {
+        custom-config-id service:HTTP
+        custom-command HTTP
+        config {
+            files=('http.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:HTTP:http.sh
+        custom-command http.sh
+        config {
+            #!/bin/sh
+            # Create web root
+            mkdir -p /var/www/html
+            echo "<html><head><title>Corporate Portal</title></head><body><h1>Welcome to Corporate Portal</h1><p>Please login to access internal resources.</p><form action='login.php' method='post'><input name='user' placeholder='Username'><input name='pass' type='password' placeholder='Password'><button>Login</button></form></body></html>" > /var/www/html/index.html
+            echo "<?php echo 'Server: ' . \$_SERVER['SERVER_NAME']; ?>" > /var/www/html/info.php
+            # Start simple HTTP server
+            cd /var/www/html && python3 -m http.server 80 &
+        }
+    }
+}
+
+node n6 {
+    type router
+    model host
+    network-config {
+        hostname mail-server
+        !
+        interface eth0
+            ip address 10.100.1.20/24
+        !
+    }
+    canvas c1
+    iconcoords {500.0 200.0}
+    labelcoords {500.0 232.0}
+    services {DefaultRoute SSH SMTP}
+    custom-config {
+        custom-config-id service:SMTP
+        custom-command SMTP
+        config {
+            files=('smtp.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:SMTP:smtp.sh
+        custom-command smtp.sh
+        config {
+            #!/bin/sh
+            # Simple SMTP banner for enumeration
+            mkdir -p /var/mail
+            echo "Corporate Mail Server - Postfix 3.4.14" > /etc/mail-banner.txt
+            # Start simple SMTP listener
+            while true; do
+                echo -e "220 mail.corporate.local ESMTP Postfix\r\n" | nc -l -p 25 -q 1
+            done &
+        }
+    }
+}
+
+node n7 {
+    type router
+    model PC
+    network-config {
+        hostname workstation-1
+        !
+        interface eth0
+            ip address 10.100.2.10/24
+        !
+    }
+    canvas c1
+    iconcoords {100.0 400.0}
+    labelcoords {100.0 432.0}
+    services {DefaultRoute SSH}
+}
+
+node n8 {
+    type router
+    model PC
+    network-config {
+        hostname workstation-2
+        !
+        interface eth0
+            ip address 10.100.2.11/24
+        !
+    }
+    canvas c1
+    iconcoords {200.0 400.0}
+    labelcoords {200.0 432.0}
+    services {DefaultRoute SSH}
+}
+
+node n9 {
+    type router
+    model PC
+    network-config {
+        hostname workstation-3
+        !
+        interface eth0
+            ip address 10.100.2.12/24
+        !
+    }
+    canvas c1
+    iconcoords {300.0 400.0}
+    labelcoords {300.0 432.0}
+    services {DefaultRoute SSH}
+}
+
+node n10 {
+    type router
+    model host
+    network-config {
+        hostname db-server
+        !
+        interface eth0
+            ip address 10.100.3.10/24
+        !
+    }
+    canvas c1
+    iconcoords {600.0 400.0}
+    labelcoords {600.0 432.0}
+    services {DefaultRoute SSH MySQL}
+    custom-config {
+        custom-config-id service:MySQL
+        custom-command MySQL
+        config {
+            files=('mysql.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MySQL:mysql.sh
+        custom-command mysql.sh
+        config {
+            #!/bin/sh
+            # Simulate MySQL service
+            mkdir -p /var/lib/mysql
+            echo "MySQL 5.7.32 - Corporate Database Server" > /var/lib/mysql/version.txt
+            # Simple MySQL banner listener
+            while true; do
+                printf '\x4a\x00\x00\x00\x0a5.7.32\x00' | nc -l -p 3306 -q 1
+            done &
+        }
+    }
+}
+
+node n11 {
+    type router
+    model host
+    network-config {
+        hostname backup-server
+        !
+        interface eth0
+            ip address 10.100.3.20/24
+        !
+    }
+    canvas c1
+    iconcoords {700.0 400.0}
+    labelcoords {700.0 432.0}
+    services {DefaultRoute SSH FTP}
+    custom-config {
+        custom-config-id service:FTP
+        custom-command FTP
+        config {
+            files=('ftp.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:FTP:ftp.sh
+        custom-command ftp.sh
+        config {
+            #!/bin/sh
+            # FTP service for backups - intentionally misconfigured for pentesting
+            mkdir -p /var/ftp/backups
+            echo "backup_2024.sql.gz" > /var/ftp/backups/files.txt
+            echo "Backup server - Anonymous FTP enabled" > /var/ftp/README.txt
+            # Simple FTP banner
+            while true; do
+                echo -e "220 backup.corporate.local FTP server ready - Anonymous login allowed\r\n" | nc -l -p 21 -q 1
+            done &
+        }
+    }
+}
+
+node n12 {
+    type router
+    model router
+    network-config {
+        hostname isp-router
+        !
+        interface eth0
+            ip address 203.0.113.254/24
+        !
+    }
+    canvas c1
+    iconcoords {400.0 20.0}
+    labelcoords {400.0 52.0}
+    services {IPForward}
+}
+
+link l1 {
+    nodes {n12 n1}
+    bandwidth 100000000
+}
+
+link l2 {
+    nodes {n1 n2}
+    bandwidth 1000000000
+}
+
+link l3 {
+    nodes {n1 n3}
+    bandwidth 1000000000
+}
+
+link l4 {
+    nodes {n1 n4}
+    bandwidth 1000000000
+}
+
+link l5 {
+    nodes {n2 n5}
+    bandwidth 1000000000
+}
+
+link l6 {
+    nodes {n2 n6}
+    bandwidth 1000000000
+}
+
+link l7 {
+    nodes {n3 n7}
+    bandwidth 1000000000
+}
+
+link l8 {
+    nodes {n3 n8}
+    bandwidth 1000000000
+}
+
+link l9 {
+    nodes {n3 n9}
+    bandwidth 1000000000
+}
+
+link l10 {
+    nodes {n4 n10}
+    bandwidth 1000000000
+}
+
+link l11 {
+    nodes {n4 n11}
+    bandwidth 1000000000
+}
+
+canvas c1 {
+    name {Corporate Network - CPTC Practice}
+    refpt {0 0 47.5791667 -122.132322 2.0}
+    scale {150.0}
+    size {900 500}
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+}
+
+annotation a1 {
+    iconcoords {250 160 550 250}
+    type rectangle
+    label {DMZ (10.100.1.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ffcccc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a2 {
+    iconcoords {50 360 350 450}
+    type rectangle
+    label {Internal Network (10.100.2.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ccffcc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a3 {
+    iconcoords {550 360 750 450}
+    type rectangle
+    label {Database Segment (10.100.3.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ccccff
+    width 0
+    border black
+    rad 0
+    canvas c1
+}

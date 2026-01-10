@@ -1,0 +1,18 @@
+# robots.txt for CPTC11 Test Application
+# Disallow access to sensitive directories
+
+User-agent: *
+Disallow: /admin/
+Disallow: /config/
+Disallow: /backup/
+Disallow: /private/
+Disallow: /.git/
+Disallow: /api/internal/
+Disallow: /uploads/temp/
+Disallow: /logs/
+Disallow: /debug/
+Disallow: /server-status
+Disallow: /server-info
+
+# Sitemap
+Sitemap: /sitemap.xml

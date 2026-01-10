@@ -53,8 +53,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
-          cache-dependency-path: golang/**/go.sum
+          cache: false  # No go.mod files in this project
 
       - name: Display Go version
         run: go version
@@ -97,7 +96,7 @@ jobs:
         working-directory: golang
         run: |
           echo "Built binaries:"
-          find . -type f -perm +111 -name "*" ! -name "*.go" 2>/dev/null || true
+          find . -type f -executable -name "*" ! -name "*.go" 2>/dev/null || find . -type f -perm /111 -name "*" ! -name "*.go" 2>/dev/null || true
 
   # =============================================================================
   # Go Vet - Static Analysis

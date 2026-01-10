@@ -1,0 +1,136 @@
+; =============================================================================
+; Zone file for testlab.local - Contains intentionally discoverable hosts
+; =============================================================================
+
+$TTL    604800
+@       IN      SOA     ns1.testlab.local. admin.testlab.local. (
+                              2024010101         ; Serial
+                              604800             ; Refresh
+                              86400              ; Retry
+                              2419200            ; Expire
+                              604800 )           ; Negative Cache TTL
+
+; Name servers
+@               IN      NS      ns1.testlab.local.
+@               IN      NS      ns2.testlab.local.
+
+; Mail servers
+@               IN      MX      10 mail.testlab.local.
+@               IN      MX      20 mail2.testlab.local.
+
+; A Records - Main domain
+@               IN      A       10.10.10.10
+
+; Name servers
+ns1             IN      A       10.10.10.40
+ns2             IN      A       10.10.10.41
+
+; Web servers
+www             IN      A       10.10.10.10
+web             IN      A       10.10.10.10
+portal          IN      A       10.10.10.10
+app             IN      A       10.10.10.10
+api             IN      A       10.10.10.10
+
+; Mail servers
+mail            IN      A       10.10.10.30
+mail2           IN      A       10.10.10.31
+smtp            IN      A       10.10.10.30
+webmail         IN      A       10.10.10.32
+
+; FTP servers
+ftp             IN      A       10.10.10.20
+files           IN      A       10.10.10.20
+
+; Internal services (discoverable through enumeration)
+intranet        IN      A       10.10.20.10
+internal        IN      A       10.10.20.10
+admin           IN      A       10.10.20.10
+dashboard       IN      A       10.10.20.10
+cms             IN      A       10.10.20.10
+
+; Development servers
+dev             IN      A       10.10.20.100
+staging         IN      A       10.10.20.101
+test            IN      A       10.10.20.102
+qa              IN      A       10.10.20.103
+uat             IN      A       10.10.20.104
+
+; Database servers
+db              IN      A       10.10.20.60
+mysql           IN      A       10.10.20.60
+postgres        IN      A       10.10.20.61
+mongodb         IN      A       10.10.20.62
+redis           IN      A       10.10.20.63
+
+; Infrastructure
+vpn             IN      A       10.10.10.50
+gateway         IN      A       10.10.10.1
+router          IN      A       10.10.10.1
+firewall        IN      A       10.10.10.2
+proxy           IN      A       10.10.10.51
+
+; Domain controllers
+dc01            IN      A       10.10.20.5
+dc02            IN      A       10.10.20.6
+ldap            IN      A       10.10.20.5
+kerberos        IN      A       10.10.20.5
+
+; File servers
+fileserver      IN      A       10.10.20.50
+nas             IN      A       10.10.20.51
+backup          IN      A       10.10.20.52
+smb             IN      A       10.10.20.50
+
+; Workstations
+ws01            IN      A       10.10.20.101
+ws02            IN      A       10.10.20.102
+ws03            IN      A       10.10.20.103
+desktop01       IN      A       10.10.20.101
+desktop02       IN      A       10.10.20.102
+
+; Servers
+srv01           IN      A       10.10.20.111
+srv02           IN      A       10.10.20.112
+server1         IN      A       10.10.20.111
+server2         IN      A       10.10.20.112
+
+; Monitoring
+monitor         IN      A       10.10.20.200
+nagios          IN      A       10.10.20.201
+grafana         IN      A       10.10.20.202
+prometheus      IN      A       10.10.20.203
+elk             IN      A       10.10.20.204
+splunk          IN      A       10.10.20.205
+
+; CI/CD
+jenkins         IN      A       10.10.20.210
+gitlab          IN      A       10.10.20.211
+github          IN      A       10.10.20.212
+ci              IN      A       10.10.20.210
+cd              IN      A       10.10.20.210
+
+; Security tools
+siem            IN      A       10.10.20.220
+ids             IN      A       10.10.20.221
+waf             IN      A       10.10.20.222
+
+; Legacy systems (hidden but discoverable)
+legacy          IN      A       10.10.20.250
+old             IN      A       10.10.20.251
+deprecated      IN      A       10.10.20.252
+
+; TXT Records
+@               IN      TXT     "v=spf1 mx a ip4:10.10.10.0/24 ~all"
+_dmarc          IN      TXT     "v=DMARC1; p=none; rua=mailto:admin@testlab.local"
+
+; SRV Records
+_ldap._tcp      IN      SRV     0 100 389 dc01.testlab.local.
+_kerberos._tcp  IN      SRV     0 100 88 dc01.testlab.local.
+_http._tcp      IN      SRV     0 100 80 www.testlab.local.
+
+; CNAME Records
+secure          IN      CNAME   www.testlab.local.
+shop            IN      CNAME   www.testlab.local.
+store           IN      CNAME   www.testlab.local.
+blog            IN      CNAME   www.testlab.local.

@@ -1,0 +1,19 @@
+<?php
+// Database configuration - BACKUP FILE
+// DO NOT EXPOSE TO PUBLIC
+
+$db_config = [
+    'host' => 'mysql-server',
+    'port' => 3306,
+    'database' => 'webapp',
+    'username' => 'webuser',
+    'password' => 'webpass123',
+    'charset' => 'utf8mb4'
+];
+
+// Admin credentials for emergency access
+$admin_backup = [
+    'username' => 'superadmin',
+    'password' => 'supersecret123'
+];
+?>

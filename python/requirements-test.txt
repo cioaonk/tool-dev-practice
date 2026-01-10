@@ -58,16 +58,19 @@ ruff>=0.1.0
 # mypy>=1.0.0
 
 # =============================================================================
-# Security Testing (Optional)
+# Security Testing
 # =============================================================================
 
 # Bandit - Security-focused static analyzer
 # Note: Ruff includes flake8-bandit rules, but standalone bandit
 # provides more detailed reports
-# bandit>=1.7.0
+bandit>=1.7.0
 
 # Safety - Check dependencies for known vulnerabilities
-# safety>=2.0.0
+safety>=2.3.0
+
+# pip-audit - Alternative to safety for vulnerability scanning
+pip-audit>=2.6.0
 
 # =============================================================================
 # Documentation Testing (Optional)

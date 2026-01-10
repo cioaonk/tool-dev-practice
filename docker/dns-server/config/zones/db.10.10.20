@@ -1,0 +1,22 @@
+; Reverse DNS zone for 10.10.20.0/24 (Internal)
+$TTL    604800
+@       IN      SOA     ns1.testlab.local. admin.testlab.local. (
+                              2024010101         ; Serial
+                              604800             ; Refresh
+                              86400              ; Retry
+                              2419200            ; Expire
+                              604800 )           ; Negative Cache TTL
+
+@       IN      NS      ns1.testlab.local.
+
+; PTR Records
+5       IN      PTR     dc01.testlab.local.
+6       IN      PTR     dc02.testlab.local.
+10      IN      PTR     intranet.testlab.local.
+50      IN      PTR     fileserver.testlab.local.
+60      IN      PTR     mysql.testlab.local.
+100     IN      PTR     dev.testlab.local.
+101     IN      PTR     ws01.testlab.local.
+102     IN      PTR     ws02.testlab.local.
+111     IN      PTR     srv01.testlab.local.
+112     IN      PTR     srv02.testlab.local.

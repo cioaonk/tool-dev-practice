@@ -1,0 +1,70 @@
+# =============================================================================
+# Target Server Container
+# =============================================================================
+# Simulates a Linux server target with multiple services for
+# penetration testing and enumeration.
+#
+# Features:
+# - SSH with weak credentials
+# - Web server
+# - Multiple discoverable services
+#
+# WARNING: This container is intentionally insecure.
+# =============================================================================
+
+FROM alpine:3.18
+
+LABEL maintainer="CPTC11 Team"
+LABEL description="Simulated server target"
+LABEL cptc11.role="server"
+
+# Install services
+RUN apk add --no-cache \
+    openssh \
+    openssl \
+    nginx \
+    netcat-openbsd \
+    curl \
+    busybox-extras \
+    python3 \
+    socat \
+    supervisor \
+    && rm -rf /var/cache/apk/*
+
+# Create users with weak passwords
+RUN adduser -D -s /bin/sh admin && echo "admin:admin123" | chpasswd \
+    && adduser -D -s /bin/sh sysadmin && echo "sysadmin:sysadmin1" | chpasswd \
+    && adduser -D -s /bin/sh deploy && echo "deploy:deploy2024" | chpasswd \
+    && adduser -D -s /bin/sh backup && echo "backup:backup123" | chpasswd
+
+# Configure SSH
+RUN ssh-keygen -A \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && echo "root:r00t" | chpasswd
+
+# Configure nginx
+RUN mkdir -p /var/www/html \
+    && echo "<h1>SRV01 - Internal Server</h1><p>Status: Online</p>" > /var/www/html/index.html
+
+# Create server directories
+RUN mkdir -p /opt/scripts \
+    && mkdir -p /opt/backups \
+    && mkdir -p /var/log/app
+
+# Create interesting files
+RUN echo "#!/bin/bash\nmysqldump -u root -prootpass123 webapp > /opt/backups/db.sql" > /opt/scripts/backup.sh \
+    && echo "Database: webapp\nUser: root\nPassword: rootpass123" > /opt/backups/db_creds.txt \
+    && echo "SSH Key: -----BEGIN RSA PRIVATE KEY-----" > /home/admin/.ssh_key_backup
+
+# Set permissions
+RUN chmod +x /opt/scripts/backup.sh \
+    && chown -R admin:admin /home/admin \
+    && chown -R sysadmin:sysadmin /opt/scripts
+
+# Copy configuration
+COPY configs/supervisord_server.conf /etc/supervisord.conf
+
+EXPOSE 22 80 443
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

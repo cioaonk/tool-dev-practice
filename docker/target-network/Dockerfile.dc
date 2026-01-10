@@ -1,0 +1,64 @@
+# =============================================================================
+# Domain Controller Simulator Container
+# =============================================================================
+# Simulates a Windows Domain Controller for Active Directory
+# enumeration testing. Uses Samba to provide LDAP-like services.
+#
+# Features:
+# - LDAP service simulation
+# - Kerberos-like authentication
+# - User enumeration endpoints
+#
+# WARNING: This container is intentionally insecure.
+# =============================================================================
+
+FROM alpine:3.18
+
+LABEL maintainer="CPTC11 Team"
+LABEL description="Simulated Domain Controller"
+LABEL cptc11.role="domain-controller"
+
+# Install services
+RUN apk add --no-cache \
+    openldap \
+    openldap-back-mdb \
+    openldap-clients \
+    openssh \
+    openssl \
+    samba \
+    samba-dc \
+    krb5-server \
+    supervisor \
+    && rm -rf /var/cache/apk/*
+
+# Create domain users
+RUN adduser -D -s /bin/sh Administrator && echo "Administrator:AdminPass123!" | chpasswd \
+    && adduser -D -s /bin/sh Domain_Admin && echo "Domain_Admin:DomAdmin2024" | chpasswd \
+    && adduser -D -s /bin/sh svc_backup && echo "svc_backup:BackupSvc123" | chpasswd \
+    && adduser -D -s /bin/sh svc_sql && echo "svc_sql:SqlSvc2024!" | chpasswd \
+    && adduser -D -s /bin/sh helpdesk && echo "helpdesk:Help123!" | chpasswd
+
+# Configure SSH
+RUN ssh-keygen -A \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && echo "root:P@ssw0rd" | chpasswd
+
+# Create AD-like structure
+RUN mkdir -p /var/lib/samba/sysvol/testlab.local/Policies \
+    && mkdir -p /var/lib/samba/sysvol/testlab.local/scripts \
+    && mkdir -p /opt/ad
+
+# Create GPO-like files
+RUN echo "Default Domain Policy" > /var/lib/samba/sysvol/testlab.local/Policies/default.txt \
+    && echo "@echo off\nnet use \\\\fileserver\\public" > /var/lib/samba/sysvol/testlab.local/scripts/logon.bat
+
+# Create user list (for enumeration)
+RUN echo "Administrator\nDomain_Admin\nsvc_backup\nsvc_sql\nhelpdesk\njsmith\nmjohnson\nrwilliams" > /opt/ad/users.txt
+
+# Copy configurations
+COPY configs/slapd.conf /etc/openldap/slapd.conf
+COPY configs/supervisord_dc.conf /etc/supervisord.conf
+
+EXPOSE 22 88 389 445 636 3268 3269
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

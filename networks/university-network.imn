@@ -1,0 +1,709 @@
+node n1 {
+    type router
+    model router
+    network-config {
+        hostname core-router
+        !
+        interface eth0
+            ip address 172.16.0.1/24
+        !
+        interface eth1
+            ip address 172.16.1.1/24
+        !
+        interface eth2
+            ip address 172.16.2.1/24
+        !
+        interface eth3
+            ip address 172.16.3.1/24
+        !
+        interface eth4
+            ip address 172.16.4.1/24
+        !
+        interface eth5
+            ip address 198.51.100.2/24
+        !
+    }
+    canvas c1
+    iconcoords {500.0 100.0}
+    labelcoords {500.0 132.0}
+    services {IPForward OSPFv2}
+    custom-config {
+        custom-config-id service:IPForward
+        custom-command IPForward
+        config {
+            files=('ipforward.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:IPForward:ipforward.sh
+        custom-command ipforward.sh
+        config {
+            #!/bin/sh
+            sysctl -w net.ipv4.ip_forward=1
+
+            # University firewall rules
+            iptables -P FORWARD ACCEPT
+
+            # Block student network from server farm direct access
+            iptables -A FORWARD -s 172.16.1.0/24 -d 172.16.4.0/24 -j DROP
+
+            # Allow established connections
+            iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+            # NAT for outbound
+            iptables -t nat -A POSTROUTING -o eth5 -j MASQUERADE
+        }
+    }
+}
+
+node n2 {
+    type router
+    model router
+    network-config {
+        hostname router-student
+        !
+        interface eth0
+            ip address 172.16.1.254/24
+        !
+        interface eth1
+            ip address 172.16.10.1/24
+        !
+    }
+    canvas c1
+    iconcoords {200.0 200.0}
+    labelcoords {200.0 232.0}
+    services {IPForward DefaultRoute}
+}
+
+node n3 {
+    type router
+    model router
+    network-config {
+        hostname router-faculty
+        !
+        interface eth0
+            ip address 172.16.2.254/24
+        !
+        interface eth1
+            ip address 172.16.20.1/24
+        !
+    }
+    canvas c1
+    iconcoords {400.0 200.0}
+    labelcoords {400.0 232.0}
+    services {IPForward DefaultRoute}
+}
+
+node n4 {
+    type router
+    model router
+    network-config {
+        hostname router-guest
+        !
+        interface eth0
+            ip address 172.16.3.254/24
+        !
+        interface eth1
+            ip address 172.16.30.1/24
+        !
+    }
+    canvas c1
+    iconcoords {600.0 200.0}
+    labelcoords {600.0 232.0}
+    services {IPForward DefaultRoute}
+    custom-config {
+        custom-config-id service:IPForward
+        custom-command IPForward
+        config {
+            files=('ipforward.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:IPForward:ipforward.sh
+        custom-command ipforward.sh
+        config {
+            #!/bin/sh
+            sysctl -w net.ipv4.ip_forward=1
+            # Guest network isolation - but misconfigured
+            iptables -A FORWARD -s 172.16.30.0/24 -d 172.16.0.0/16 -j DROP
+            # Oops, forgot to block before route decision
+        }
+    }
+}
+
+node n5 {
+    type router
+    model router
+    network-config {
+        hostname router-servers
+        !
+        interface eth0
+            ip address 172.16.4.254/24
+        !
+        interface eth1
+            ip address 172.16.40.1/24
+        !
+    }
+    canvas c1
+    iconcoords {800.0 200.0}
+    labelcoords {800.0 232.0}
+    services {IPForward DefaultRoute}
+}
+
+node n6 {
+    type lanswitch
+    network-config {
+        hostname sw-student
+        !
+    }
+    canvas c1
+    iconcoords {200.0 300.0}
+    labelcoords {200.0 332.0}
+}
+
+node n7 {
+    type lanswitch
+    network-config {
+        hostname sw-faculty
+        !
+    }
+    canvas c1
+    iconcoords {400.0 300.0}
+    labelcoords {400.0 332.0}
+}
+
+node n8 {
+    type lanswitch
+    network-config {
+        hostname sw-guest
+        !
+    }
+    canvas c1
+    iconcoords {600.0 300.0}
+    labelcoords {600.0 332.0}
+}
+
+node n9 {
+    type lanswitch
+    network-config {
+        hostname sw-servers
+        !
+    }
+    canvas c1
+    iconcoords {800.0 300.0}
+    labelcoords {800.0 332.0}
+}
+
+node n10 {
+    type router
+    model PC
+    network-config {
+        hostname student-pc-1
+        !
+        interface eth0
+            ip address 172.16.10.10/24
+        !
+    }
+    canvas c1
+    iconcoords {100.0 400.0}
+    labelcoords {100.0 432.0}
+    services {DefaultRoute}
+}
+
+node n11 {
+    type router
+    model PC
+    network-config {
+        hostname student-pc-2
+        !
+        interface eth0
+            ip address 172.16.10.11/24
+        !
+    }
+    canvas c1
+    iconcoords {200.0 400.0}
+    labelcoords {200.0 432.0}
+    services {DefaultRoute}
+}
+
+node n12 {
+    type router
+    model PC
+    network-config {
+        hostname student-pc-3
+        !
+        interface eth0
+            ip address 172.16.10.12/24
+        !
+    }
+    canvas c1
+    iconcoords {300.0 400.0}
+    labelcoords {300.0 432.0}
+    services {DefaultRoute}
+}
+
+node n13 {
+    type router
+    model PC
+    network-config {
+        hostname faculty-pc-1
+        !
+        interface eth0
+            ip address 172.16.20.10/24
+        !
+    }
+    canvas c1
+    iconcoords {350.0 400.0}
+    labelcoords {350.0 432.0}
+    services {DefaultRoute SSH}
+}
+
+node n14 {
+    type router
+    model PC
+    network-config {
+        hostname faculty-pc-2
+        !
+        interface eth0
+            ip address 172.16.20.11/24
+        !
+    }
+    canvas c1
+    iconcoords {450.0 400.0}
+    labelcoords {450.0 432.0}
+    services {DefaultRoute SSH}
+}
+
+node n15 {
+    type router
+    model PC
+    network-config {
+        hostname guest-device-1
+        !
+        interface eth0
+            ip address 172.16.30.100/24
+        !
+    }
+    canvas c1
+    iconcoords {550.0 400.0}
+    labelcoords {550.0 432.0}
+    services {DefaultRoute}
+}
+
+node n16 {
+    type router
+    model PC
+    network-config {
+        hostname guest-device-2
+        !
+        interface eth0
+            ip address 172.16.30.101/24
+        !
+    }
+    canvas c1
+    iconcoords {650.0 400.0}
+    labelcoords {650.0 432.0}
+    services {DefaultRoute}
+}
+
+node n17 {
+    type router
+    model host
+    network-config {
+        hostname web-portal
+        !
+        interface eth0
+            ip address 172.16.40.10/24
+        !
+    }
+    canvas c1
+    iconcoords {700.0 400.0}
+    labelcoords {700.0 432.0}
+    services {DefaultRoute SSH HTTP}
+    custom-config {
+        custom-config-id service:HTTP
+        custom-command HTTP
+        config {
+            files=('http.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:HTTP:http.sh
+        custom-command http.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/www/html
+            echo "<html><title>University Portal</title><body><h1>State University</h1><h2>Student Portal</h2><form action='login.php' method='post'><input name='student_id' placeholder='Student ID'><input name='password' type='password'><button>Login</button></form><p>Forgot password? Contact IT</p></body></html>" > /var/www/html/index.html
+            echo "<?php include('config.php'); \$conn = mysqli_connect(\$db_host, \$db_user, \$db_pass); ?>" > /var/www/html/login.php
+            echo "<?php \$db_host='172.16.40.20'; \$db_user='webapp'; \$db_pass='Univ2024!'; ?>" > /var/www/html/config.php
+            cd /var/www/html && python3 -m http.server 80 &
+            cd /var/www/html && python3 -m http.server 443 &
+        }
+    }
+}
+
+node n18 {
+    type router
+    model host
+    network-config {
+        hostname db-server
+        !
+        interface eth0
+            ip address 172.16.40.20/24
+        !
+    }
+    canvas c1
+    iconcoords {800.0 400.0}
+    labelcoords {800.0 432.0}
+    services {DefaultRoute SSH MySQL}
+    custom-config {
+        custom-config-id service:MySQL
+        custom-command MySQL
+        config {
+            files=('mysql.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MySQL:mysql.sh
+        custom-command mysql.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/lib/mysql
+            echo "MySQL 8.0.28 - University Database" > /var/lib/mysql/version.txt
+            while true; do
+                printf '\x4a\x00\x00\x00\x0a8.0.28\x00' | nc -l -p 3306 -q 1
+            done &
+        }
+    }
+}
+
+node n19 {
+    type router
+    model host
+    network-config {
+        hostname ldap-server
+        !
+        interface eth0
+            ip address 172.16.40.30/24
+        !
+    }
+    canvas c1
+    iconcoords {900.0 400.0}
+    labelcoords {900.0 432.0}
+    services {DefaultRoute SSH LDAP}
+    custom-config {
+        custom-config-id service:LDAP
+        custom-command LDAP
+        config {
+            files=('ldap.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:LDAP:ldap.sh
+        custom-command ldap.sh
+        config {
+            #!/bin/sh
+            # LDAP Server for authentication
+            mkdir -p /var/lib/ldap
+            echo "dc=university,dc=edu" > /var/lib/ldap/base.txt
+            while true; do
+                echo "LDAP Server Ready" | nc -l -p 389 -q 1
+            done &
+            while true; do
+                echo "LDAPS Server Ready" | nc -l -p 636 -q 1
+            done &
+        }
+    }
+}
+
+node n20 {
+    type router
+    model host
+    network-config {
+        hostname dns-server
+        !
+        interface eth0
+            ip address 172.16.40.5/24
+        !
+    }
+    canvas c1
+    iconcoords {750.0 350.0}
+    labelcoords {750.0 382.0}
+    services {DefaultRoute SSH DNS}
+    custom-config {
+        custom-config-id service:DNS
+        custom-command DNS
+        config {
+            files=('dns.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:DNS:dns.sh
+        custom-command dns.sh
+        config {
+            #!/bin/sh
+            # DNS Server
+            mkdir -p /etc/bind
+            cat > /etc/bind/university.zone << 'ZONE'
+            university.edu.    IN  SOA ns1.university.edu. admin.university.edu. (
+                2024010101 ; serial
+                3600       ; refresh
+                1800       ; retry
+                604800     ; expire
+                86400      ; minimum
+            )
+            university.edu.    IN  NS   ns1.university.edu.
+            ns1                IN  A    172.16.40.5
+            portal             IN  A    172.16.40.10
+            db                 IN  A    172.16.40.20
+            ldap               IN  A    172.16.40.30
+            mail               IN  A    172.16.40.40
+            ZONE
+            echo "DNS server configured for university.edu"
+        }
+    }
+}
+
+node n21 {
+    type router
+    model host
+    network-config {
+        hostname mail-server
+        !
+        interface eth0
+            ip address 172.16.40.40/24
+        !
+    }
+    canvas c1
+    iconcoords {850.0 350.0}
+    labelcoords {850.0 382.0}
+    services {DefaultRoute SSH SMTP IMAP}
+    custom-config {
+        custom-config-id service:SMTP
+        custom-command SMTP
+        config {
+            files=('smtp.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:SMTP:smtp.sh
+        custom-command smtp.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/mail
+            while true; do
+                echo -e "220 mail.university.edu ESMTP Postfix\r\n" | nc -l -p 25 -q 1
+            done &
+            while true; do
+                echo -e "* OK mail.university.edu Dovecot ready.\r\n" | nc -l -p 143 -q 1
+            done &
+        }
+    }
+}
+
+node n22 {
+    type router
+    model router
+    network-config {
+        hostname isp-border
+        !
+        interface eth0
+            ip address 198.51.100.1/24
+        !
+    }
+    canvas c1
+    iconcoords {500.0 20.0}
+    labelcoords {500.0 52.0}
+    services {IPForward}
+}
+
+link l1 {
+    nodes {n22 n1}
+    bandwidth 10000000000
+}
+
+link l2 {
+    nodes {n1 n2}
+    bandwidth 10000000000
+}
+
+link l3 {
+    nodes {n1 n3}
+    bandwidth 10000000000
+}
+
+link l4 {
+    nodes {n1 n4}
+    bandwidth 10000000000
+}
+
+link l5 {
+    nodes {n1 n5}
+    bandwidth 10000000000
+}
+
+link l6 {
+    nodes {n2 n6}
+    bandwidth 1000000000
+}
+
+link l7 {
+    nodes {n3 n7}
+    bandwidth 1000000000
+}
+
+link l8 {
+    nodes {n4 n8}
+    bandwidth 1000000000
+}
+
+link l9 {
+    nodes {n5 n9}
+    bandwidth 1000000000
+}
+
+link l10 {
+    nodes {n6 n10}
+    bandwidth 1000000000
+}
+
+link l11 {
+    nodes {n6 n11}
+    bandwidth 1000000000
+}
+
+link l12 {
+    nodes {n6 n12}
+    bandwidth 1000000000
+}
+
+link l13 {
+    nodes {n7 n13}
+    bandwidth 1000000000
+}
+
+link l14 {
+    nodes {n7 n14}
+    bandwidth 1000000000
+}
+
+link l15 {
+    nodes {n8 n15}
+    bandwidth 1000000000
+}
+
+link l16 {
+    nodes {n8 n16}
+    bandwidth 1000000000
+}
+
+link l17 {
+    nodes {n9 n17}
+    bandwidth 1000000000
+}
+
+link l18 {
+    nodes {n9 n18}
+    bandwidth 1000000000
+}
+
+link l19 {
+    nodes {n9 n19}
+    bandwidth 1000000000
+}
+
+link l20 {
+    nodes {n9 n20}
+    bandwidth 1000000000
+}
+
+link l21 {
+    nodes {n9 n21}
+    bandwidth 1000000000
+}
+
+canvas c1 {
+    name {University Network - CPTC Practice}
+    refpt {0 0 47.5791667 -122.132322 2.0}
+    scale {150.0}
+    size {1000 500}
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+}
+
+annotation a1 {
+    iconcoords {50 350 330 450}
+    type rectangle
+    label {Student Network (172.16.10.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ffcccc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a2 {
+    iconcoords {330 350 500 450}
+    type rectangle
+    label {Faculty (172.16.20.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ccffcc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a3 {
+    iconcoords {500 350 700 450}
+    type rectangle
+    label {Guest WiFi (172.16.30.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ffffcc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a4 {
+    iconcoords {700 300 950 450}
+    type rectangle
+    label {Server Farm (172.16.40.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ccccff
+    width 0
+    border black
+    rad 0
+    canvas c1
+}

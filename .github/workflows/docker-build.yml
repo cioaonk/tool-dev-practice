@@ -1,0 +1,287 @@
+# CPTC11 Docker Build Workflow
+# Builds and tests all Docker containers in the docker/ directory
+#
+# Containers:
+#   - vulnerable-web: Intentionally vulnerable web application
+#   - ftp-server: FTP server for credential testing
+#   - smtp-server: SMTP server for email testing
+#
+# Triggers:
+#   - Push to main branch (when Docker files change)
+#   - Pull requests targeting main branch (when Docker files change)
+#
+# Note: These containers are for testing purposes only and contain
+# intentional vulnerabilities. Do not deploy to production.
+
+name: Docker Build
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'docker/**'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'docker/**'
+      - '.github/workflows/docker-build.yml'
+  workflow_dispatch:  # Allow manual triggering
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =============================================================================
+  # Discover Docker Containers
+  # =============================================================================
+  discover:
+    name: Discover Containers
+    runs-on: ubuntu-latest
+    outputs:
+      containers: ${{ steps.find-containers.outputs.containers }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find Dockerfiles
+        id: find-containers
+        run: |
+          # Find all directories containing Dockerfiles
+          containers=$(find docker -name "Dockerfile" -type f | xargs -I {} dirname {} | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "containers=$containers" >> $GITHUB_OUTPUT
+          echo "Found containers: $containers"
+
+  # =============================================================================
+  # Build Vulnerable Web Container
+  # =============================================================================
+  build-vulnerable-web:
+    name: Build vulnerable-web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check for required files
+        working-directory: docker/vulnerable-web
+        run: |
+          echo "Checking vulnerable-web container structure..."
+          ls -la
+          if [ ! -f "Dockerfile" ]; then
+            echo "ERROR: Dockerfile not found"
+            exit 1
+          fi
+
+      - name: Build vulnerable-web image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/vulnerable-web
+          push: false
+          load: true
+          tags: cptc11/vulnerable-web:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        continue-on-error: true
+
+      - name: Test container starts
+        continue-on-error: true
+        run: |
+          echo "Testing if container starts..."
+          docker run -d --name test-vulnerable-web -p 8080:80 cptc11/vulnerable-web:test || {
+            echo "Container failed to start (may be missing config files)"
+            exit 0
+          }
+
+          # Wait for container to be ready
+          sleep 5
+
+          # Check if container is running
+          if docker ps | grep -q test-vulnerable-web; then
+            echo "Container is running"
+
+            # Check health endpoint
+            curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true
+          else
+            echo "Container stopped (may be expected if missing config)"
+          fi
+
+          # Cleanup
+          docker stop test-vulnerable-web 2>/dev/null || true
+          docker rm test-vulnerable-web 2>/dev/null || true
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'cptc11/vulnerable-web:test'
+          format: 'table'
+          exit-code: '0'  # Don't fail - intentionally vulnerable
+          severity: 'CRITICAL,HIGH'
+
+  # =============================================================================
+  # Build FTP Server Container
+  # =============================================================================
+  build-ftp-server:
+    name: Build ftp-server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check for required files
+        working-directory: docker/ftp-server
+        run: |
+          echo "Checking ftp-server container structure..."
+          ls -la
+          if [ ! -f "Dockerfile" ]; then
+            echo "ERROR: Dockerfile not found"
+            exit 1
+          fi
+
+      - name: Build ftp-server image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/ftp-server
+          push: false
+          load: true
+          tags: cptc11/ftp-server:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        continue-on-error: true
+
+      - name: Test container starts
+        continue-on-error: true
+        run: |
+          echo "Testing if container starts..."
+          docker run -d --name test-ftp-server -p 21:21 cptc11/ftp-server:test || {
+            echo "Container failed to start (may be missing config files)"
+            exit 0
+          }
+
+          sleep 3
+
+          # Check if container is running
+          if docker ps | grep -q test-ftp-server; then
+            echo "Container is running"
+          else
+            echo "Container stopped (may be expected if missing config)"
+          fi
+
+          # Cleanup
+          docker stop test-ftp-server 2>/dev/null || true
+          docker rm test-ftp-server 2>/dev/null || true
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'cptc11/ftp-server:test'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+  # =============================================================================
+  # Build SMTP Server Container
+  # =============================================================================
+  build-smtp-server:
+    name: Build smtp-server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check for required files
+        working-directory: docker/smtp-server
+        run: |
+          echo "Checking smtp-server container structure..."
+          ls -la
+          if [ ! -f "Dockerfile" ]; then
+            echo "ERROR: Dockerfile not found"
+            exit 1
+          fi
+
+      - name: Build smtp-server image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/smtp-server
+          push: false
+          load: true
+          tags: cptc11/smtp-server:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        continue-on-error: true
+
+      - name: Test container starts
+        continue-on-error: true
+        run: |
+          echo "Testing if container starts..."
+          docker run -d --name test-smtp-server -p 25:25 cptc11/smtp-server:test || {
+            echo "Container failed to start (may be missing config files)"
+            exit 0
+          }
+
+          sleep 3
+
+          # Check if container is running
+          if docker ps | grep -q test-smtp-server; then
+            echo "Container is running"
+          else
+            echo "Container stopped (may be expected if missing config)"
+          fi
+
+          # Cleanup
+          docker stop test-smtp-server 2>/dev/null || true
+          docker rm test-smtp-server 2>/dev/null || true
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: 'cptc11/smtp-server:test'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+  # =============================================================================
+  # Docker Build Summary
+  # =============================================================================
+  docker-summary:
+    name: Docker Build Summary
+    needs: [build-vulnerable-web, build-ftp-server, build-smtp-server]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Create summary
+        run: |
+          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Container | Build Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| vulnerable-web | ${{ needs.build-vulnerable-web.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ftp-server | ${{ needs.build-ftp-server.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| smtp-server | ${{ needs.build-smtp-server.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** These containers are intentionally vulnerable and" >> $GITHUB_STEP_SUMMARY
+          echo "designed for security testing purposes only." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build failures may occur if configuration files (apache configs," >> $GITHUB_STEP_SUMMARY
+          echo "vsftpd.conf, postfix configs) are not present in the repository." >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,22 @@
+; Reverse DNS zone for 10.10.10.0/24 (DMZ)
+$TTL    604800
+@       IN      SOA     ns1.testlab.local. admin.testlab.local. (
+                              2024010101         ; Serial
+                              604800             ; Refresh
+                              86400              ; Retry
+                              2419200            ; Expire
+                              604800 )           ; Negative Cache TTL
+
+@       IN      NS      ns1.testlab.local.
+
+; PTR Records
+1       IN      PTR     gateway.testlab.local.
+2       IN      PTR     firewall.testlab.local.
+10      IN      PTR     www.testlab.local.
+20      IN      PTR     ftp.testlab.local.
+30      IN      PTR     mail.testlab.local.
+40      IN      PTR     ns1.testlab.local.
+41      IN      PTR     ns2.testlab.local.
+50      IN      PTR     vpn.testlab.local.
+51      IN      PTR     proxy.testlab.local.
+100     IN      PTR     attacker.testlab.local.

@@ -1,0 +1,838 @@
+node n1 {
+    type router
+    model router
+    network-config {
+        hostname fw-corporate
+        !
+        interface eth0
+            ip address 10.0.0.1/24
+        !
+        interface eth1
+            ip address 192.168.1.1/24
+        !
+    }
+    canvas c1
+    iconcoords {400.0 50.0}
+    labelcoords {400.0 82.0}
+    services {IPForward DefaultRoute}
+    custom-config {
+        custom-config-id service:IPForward
+        custom-command IPForward
+        config {
+            files=('ipforward.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:IPForward:ipforward.sh
+        custom-command ipforward.sh
+        config {
+            #!/bin/sh
+            sysctl -w net.ipv4.ip_forward=1
+
+            # Corporate to DMZ firewall rules
+            iptables -P FORWARD DROP
+
+            # Allow IT to access DMZ
+            iptables -A FORWARD -s 10.0.0.0/24 -d 192.168.1.0/24 -j ACCEPT
+            iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+        }
+    }
+}
+
+node n2 {
+    type router
+    model router
+    network-config {
+        hostname fw-dmz
+        !
+        interface eth0
+            ip address 192.168.1.254/24
+        !
+        interface eth1
+            ip address 192.168.100.1/24
+        !
+    }
+    canvas c1
+    iconcoords {400.0 150.0}
+    labelcoords {400.0 182.0}
+    services {IPForward DefaultRoute}
+    custom-config {
+        custom-config-id service:IPForward
+        custom-command IPForward
+        config {
+            files=('ipforward.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:IPForward:ipforward.sh
+        custom-command ipforward.sh
+        config {
+            #!/bin/sh
+            sysctl -w net.ipv4.ip_forward=1
+
+            # DMZ to OT firewall - should be strict but has misconfigs
+            iptables -P FORWARD DROP
+
+            # Historian needs OT access
+            iptables -A FORWARD -s 192.168.1.0/24 -d 192.168.100.0/24 -p tcp --dport 502 -j ACCEPT
+            iptables -A FORWARD -s 192.168.1.0/24 -d 192.168.100.0/24 -p tcp --dport 102 -j ACCEPT
+
+            # Engineering workstation access - too permissive!
+            iptables -A FORWARD -s 192.168.1.50 -d 192.168.100.0/24 -j ACCEPT
+
+            iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+        }
+    }
+}
+
+node n3 {
+    type lanswitch
+    network-config {
+        hostname sw-corporate
+        !
+    }
+    canvas c1
+    iconcoords {200.0 50.0}
+    labelcoords {200.0 82.0}
+}
+
+node n4 {
+    type lanswitch
+    network-config {
+        hostname sw-dmz
+        !
+    }
+    canvas c1
+    iconcoords {400.0 250.0}
+    labelcoords {400.0 282.0}
+}
+
+node n5 {
+    type lanswitch
+    network-config {
+        hostname sw-ot
+        !
+    }
+    canvas c1
+    iconcoords {400.0 400.0}
+    labelcoords {400.0 432.0}
+}
+
+node n6 {
+    type router
+    model PC
+    network-config {
+        hostname it-workstation
+        !
+        interface eth0
+            ip address 10.0.0.10/24
+        !
+    }
+    canvas c1
+    iconcoords {100.0 50.0}
+    labelcoords {100.0 82.0}
+    services {DefaultRoute SSH}
+}
+
+node n7 {
+    type router
+    model PC
+    network-config {
+        hostname it-admin
+        !
+        interface eth0
+            ip address 10.0.0.11/24
+        !
+    }
+    canvas c1
+    iconcoords {100.0 100.0}
+    labelcoords {100.0 132.0}
+    services {DefaultRoute SSH}
+}
+
+node n8 {
+    type router
+    model host
+    network-config {
+        hostname historian
+        !
+        interface eth0
+            ip address 192.168.1.10/24
+        !
+    }
+    canvas c1
+    iconcoords {200.0 250.0}
+    labelcoords {200.0 282.0}
+    services {DefaultRoute SSH HTTP}
+    custom-config {
+        custom-config-id service:HTTP
+        custom-command HTTP
+        config {
+            files=('http.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:HTTP:http.sh
+        custom-command http.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/www/html
+            echo "<html><title>Historian Server</title><body><h1>Process Historian</h1><p>OSIsoft PI Server 2018</p><p>Last data point: $(date)</p><table border='1'><tr><th>Tag</th><th>Value</th></tr><tr><td>TEMP001</td><td>72.5</td></tr><tr><td>PRESS001</td><td>14.7</td></tr><tr><td>FLOW001</td><td>250.3</td></tr></table></body></html>" > /var/www/html/index.html
+            cd /var/www/html && python3 -m http.server 80 &
+            # PI SDK port
+            while true; do
+                echo "PI Server Ready" | nc -l -p 5450 -q 1
+            done &
+        }
+    }
+}
+
+node n9 {
+    type router
+    model host
+    network-config {
+        hostname hmi-server
+        !
+        interface eth0
+            ip address 192.168.1.20/24
+        !
+    }
+    canvas c1
+    iconcoords {300.0 250.0}
+    labelcoords {300.0 282.0}
+    services {DefaultRoute SSH HTTP VNC}
+    custom-config {
+        custom-config-id service:HTTP
+        custom-command HTTP
+        config {
+            files=('http.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:HTTP:http.sh
+        custom-command http.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/www/html
+            cat > /var/www/html/index.html << 'EOF'
+            <html><title>HMI Web Interface</title><body>
+            <h1>SCADA HMI - Water Treatment Plant</h1>
+            <h2>System Status: ONLINE</h2>
+            <div style="border:1px solid black;padding:10px;">
+            <h3>Tank Levels</h3>
+            <p>Tank 1: 75% [====------]</p>
+            <p>Tank 2: 50% [=====-----]</p>
+            <p>Tank 3: 90% [==========-]</p>
+            </div>
+            <div style="border:1px solid black;padding:10px;margin-top:10px;">
+            <h3>Pump Controls</h3>
+            <button onclick="alert('Pump 1 Started')">Start Pump 1</button>
+            <button onclick="alert('Pump 2 Started')">Start Pump 2</button>
+            <button onclick="alert('Emergency Stop')">EMERGENCY STOP</button>
+            </div>
+            <p><a href="config.php">Configuration</a> | <a href="admin/">Admin Panel</a></p>
+            </body></html>
+            EOF
+            echo "<?php // Default creds: admin/admin ?>" > /var/www/html/config.php
+            cd /var/www/html && python3 -m http.server 80 &
+        }
+    }
+    custom-config {
+        custom-config-id service:VNC
+        custom-command VNC
+        config {
+            files=('vnc.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:VNC:vnc.sh
+        custom-command vnc.sh
+        config {
+            #!/bin/sh
+            # VNC for remote HMI access - weak security
+            while true; do
+                printf 'RFB 003.008\n' | nc -l -p 5900 -q 1
+            done &
+        }
+    }
+}
+
+node n10 {
+    type router
+    model host
+    network-config {
+        hostname eng-workstation
+        !
+        interface eth0
+            ip address 192.168.1.50/24
+        !
+    }
+    canvas c1
+    iconcoords {500.0 250.0}
+    labelcoords {500.0 282.0}
+    services {DefaultRoute SSH}
+}
+
+node n11 {
+    type router
+    model host
+    network-config {
+        hostname jump-server
+        !
+        interface eth0
+            ip address 192.168.1.100/24
+        !
+    }
+    canvas c1
+    iconcoords {600.0 250.0}
+    labelcoords {600.0 282.0}
+    services {DefaultRoute SSH RDP}
+    custom-config {
+        custom-config-id service:RDP
+        custom-command RDP
+        config {
+            files=('rdp.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:RDP:rdp.sh
+        custom-command rdp.sh
+        config {
+            #!/bin/sh
+            # RDP for remote access
+            while true; do
+                printf '\x03\x00\x00\x13\x0e\xe0\x00\x00\x00\x00\x00\x01\x00\x08\x00\x03\x00\x00\x00' | nc -l -p 3389 -q 1
+            done &
+        }
+    }
+}
+
+node n12 {
+    type router
+    model host
+    network-config {
+        hostname scada-master
+        !
+        interface eth0
+            ip address 192.168.100.10/24
+        !
+    }
+    canvas c1
+    iconcoords {200.0 400.0}
+    labelcoords {200.0 432.0}
+    services {DefaultRoute MODBUS DNP3}
+    custom-config {
+        custom-config-id service:MODBUS
+        custom-command MODBUS
+        config {
+            files=('modbus.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MODBUS:modbus.sh
+        custom-command modbus.sh
+        config {
+            #!/bin/sh
+            # Modbus TCP server - SCADA master station
+            mkdir -p /var/scada
+            echo "SCADA Master - Schneider Electric ClearSCADA" > /var/scada/version.txt
+            # Modbus TCP listener on port 502
+            while true; do
+                # Simple Modbus response
+                printf '\x00\x01\x00\x00\x00\x03\x01\x01\x01' | nc -l -p 502 -q 1
+            done &
+        }
+    }
+    custom-config {
+        custom-config-id service:DNP3
+        custom-command DNP3
+        config {
+            files=('dnp3.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:DNP3:dnp3.sh
+        custom-command dnp3.sh
+        config {
+            #!/bin/sh
+            # DNP3 protocol listener
+            while true; do
+                printf '\x05\x64\x05\xc0\x01\x00\x00\x00' | nc -l -p 20000 -q 1
+            done &
+        }
+    }
+}
+
+node n13 {
+    type router
+    model host
+    network-config {
+        hostname plc-1
+        !
+        interface eth0
+            ip address 192.168.100.20/24
+        !
+    }
+    canvas c1
+    iconcoords {300.0 400.0}
+    labelcoords {300.0 432.0}
+    services {DefaultRoute MODBUS S7COMM}
+    custom-config {
+        custom-config-id service:MODBUS
+        custom-command MODBUS
+        config {
+            files=('modbus.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MODBUS:modbus.sh
+        custom-command modbus.sh
+        config {
+            #!/bin/sh
+            # Siemens S7-1200 PLC simulator
+            mkdir -p /var/plc
+            echo "Siemens S7-1200 - Firmware 4.4" > /var/plc/info.txt
+            # Modbus slave
+            while true; do
+                printf '\x00\x01\x00\x00\x00\x03\x01\x01\x00' | nc -l -p 502 -q 1
+            done &
+        }
+    }
+    custom-config {
+        custom-config-id service:S7COMM
+        custom-command S7COMM
+        config {
+            files=('s7comm.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:S7COMM:s7comm.sh
+        custom-command s7comm.sh
+        config {
+            #!/bin/sh
+            # S7comm protocol (Siemens)
+            while true; do
+                printf '\x03\x00\x00\x16\x11\xe0\x00\x00\x00\x01\x00\xc1\x02\x01\x00\xc2\x02\x01\x02\xc0\x01\x09' | nc -l -p 102 -q 1
+            done &
+        }
+    }
+}
+
+node n14 {
+    type router
+    model host
+    network-config {
+        hostname plc-2
+        !
+        interface eth0
+            ip address 192.168.100.21/24
+        !
+    }
+    canvas c1
+    iconcoords {400.0 500.0}
+    labelcoords {400.0 532.0}
+    services {DefaultRoute MODBUS ENIP}
+    custom-config {
+        custom-config-id service:MODBUS
+        custom-command MODBUS
+        config {
+            files=('modbus.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MODBUS:modbus.sh
+        custom-command modbus.sh
+        config {
+            #!/bin/sh
+            # Allen-Bradley PLC simulator
+            mkdir -p /var/plc
+            echo "Allen-Bradley ControlLogix 5580" > /var/plc/info.txt
+            while true; do
+                printf '\x00\x01\x00\x00\x00\x03\x01\x01\x00' | nc -l -p 502 -q 1
+            done &
+        }
+    }
+    custom-config {
+        custom-config-id service:ENIP
+        custom-command ENIP
+        config {
+            files=('enip.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:ENIP:enip.sh
+        custom-command enip.sh
+        config {
+            #!/bin/sh
+            # EtherNet/IP protocol (Rockwell/Allen-Bradley)
+            while true; do
+                printf '\x65\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' | nc -l -p 44818 -q 1
+            done &
+        }
+    }
+}
+
+node n15 {
+    type router
+    model host
+    network-config {
+        hostname rtu-1
+        !
+        interface eth0
+            ip address 192.168.100.30/24
+        !
+    }
+    canvas c1
+    iconcoords {500.0 400.0}
+    labelcoords {500.0 432.0}
+    services {DefaultRoute MODBUS DNP3}
+    custom-config {
+        custom-config-id service:MODBUS
+        custom-command MODBUS
+        config {
+            files=('modbus.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MODBUS:modbus.sh
+        custom-command modbus.sh
+        config {
+            #!/bin/sh
+            # Remote Terminal Unit
+            mkdir -p /var/rtu
+            echo "SEL-3530 RTAC" > /var/rtu/info.txt
+            while true; do
+                printf '\x00\x01\x00\x00\x00\x03\x01\x03\x02\x00\x00' | nc -l -p 502 -q 1
+            done &
+        }
+    }
+    custom-config {
+        custom-config-id service:DNP3
+        custom-command DNP3
+        config {
+            files=('dnp3.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:DNP3:dnp3.sh
+        custom-command dnp3.sh
+        config {
+            #!/bin/sh
+            while true; do
+                printf '\x05\x64\x05\xc0\x01\x00\x00\x00' | nc -l -p 20000 -q 1
+            done &
+        }
+    }
+}
+
+node n16 {
+    type router
+    model host
+    network-config {
+        hostname field-hmi
+        !
+        interface eth0
+            ip address 192.168.100.40/24
+        !
+    }
+    canvas c1
+    iconcoords {600.0 400.0}
+    labelcoords {600.0 432.0}
+    services {DefaultRoute HTTP VNC}
+    custom-config {
+        custom-config-id service:HTTP
+        custom-command HTTP
+        config {
+            files=('http.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:HTTP:http.sh
+        custom-command http.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/www/html
+            echo "<html><title>Field HMI</title><body><h1>Field Operator Panel</h1><p>Pump Station 3</p><p>Status: Running</p><p>Flow: 1250 GPM</p><p>Pressure: 45 PSI</p></body></html>" > /var/www/html/index.html
+            cd /var/www/html && python3 -m http.server 80 &
+        }
+    }
+    custom-config {
+        custom-config-id service:VNC
+        custom-command VNC
+        config {
+            files=('vnc.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:VNC:vnc.sh
+        custom-command vnc.sh
+        config {
+            #!/bin/sh
+            while true; do
+                printf 'RFB 003.008\n' | nc -l -p 5900 -q 1
+            done &
+        }
+    }
+}
+
+node n17 {
+    type lanswitch
+    network-config {
+        hostname sw-airgap
+        !
+    }
+    canvas c1
+    iconcoords {700.0 500.0}
+    labelcoords {700.0 532.0}
+}
+
+node n18 {
+    type router
+    model host
+    network-config {
+        hostname safety-plc
+        !
+        interface eth0
+            ip address 192.168.200.10/24
+        !
+    }
+    canvas c1
+    iconcoords {650.0 550.0}
+    labelcoords {650.0 582.0}
+    services {DefaultRoute MODBUS}
+    custom-config {
+        custom-config-id service:MODBUS
+        custom-command MODBUS
+        config {
+            files=('modbus.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:MODBUS:modbus.sh
+        custom-command modbus.sh
+        config {
+            #!/bin/sh
+            # Safety Instrumented System
+            mkdir -p /var/safety
+            echo "Triconex Tricon CX - Safety Controller" > /var/safety/info.txt
+            while true; do
+                printf '\x00\x01\x00\x00\x00\x03\x01\x01\x01' | nc -l -p 502 -q 1
+            done &
+        }
+    }
+}
+
+node n19 {
+    type router
+    model host
+    network-config {
+        hostname safety-hmi
+        !
+        interface eth0
+            ip address 192.168.200.20/24
+        !
+    }
+    canvas c1
+    iconcoords {750.0 550.0}
+    labelcoords {750.0 582.0}
+    services {DefaultRoute HTTP}
+    custom-config {
+        custom-config-id service:HTTP
+        custom-command HTTP
+        config {
+            files=('http.sh', )
+            startidx=1
+        }
+    }
+    custom-config {
+        custom-config-id service:HTTP:http.sh
+        custom-command http.sh
+        config {
+            #!/bin/sh
+            mkdir -p /var/www/html
+            echo "<html><title>Safety System</title><body style='background:yellow;'><h1>SAFETY INSTRUMENTED SYSTEM</h1><h2>Status: ARMED</h2><p>Emergency Shutdown: READY</p><p>Last Test: 2024-01-01</p></body></html>" > /var/www/html/index.html
+            cd /var/www/html && python3 -m http.server 80 &
+        }
+    }
+}
+
+link l1 {
+    nodes {n1 n3}
+    bandwidth 1000000000
+}
+
+link l2 {
+    nodes {n3 n6}
+    bandwidth 1000000000
+}
+
+link l3 {
+    nodes {n3 n7}
+    bandwidth 1000000000
+}
+
+link l4 {
+    nodes {n1 n2}
+    bandwidth 1000000000
+}
+
+link l5 {
+    nodes {n2 n4}
+    bandwidth 1000000000
+}
+
+link l6 {
+    nodes {n4 n8}
+    bandwidth 1000000000
+}
+
+link l7 {
+    nodes {n4 n9}
+    bandwidth 1000000000
+}
+
+link l8 {
+    nodes {n4 n10}
+    bandwidth 1000000000
+}
+
+link l9 {
+    nodes {n4 n11}
+    bandwidth 1000000000
+}
+
+link l10 {
+    nodes {n2 n5}
+    bandwidth 100000000
+}
+
+link l11 {
+    nodes {n5 n12}
+    bandwidth 100000000
+}
+
+link l12 {
+    nodes {n5 n13}
+    bandwidth 100000000
+}
+
+link l13 {
+    nodes {n5 n14}
+    bandwidth 100000000
+}
+
+link l14 {
+    nodes {n5 n15}
+    bandwidth 100000000
+}
+
+link l15 {
+    nodes {n5 n16}
+    bandwidth 100000000
+}
+
+link l16 {
+    nodes {n17 n18}
+    bandwidth 100000000
+}
+
+link l17 {
+    nodes {n17 n19}
+    bandwidth 100000000
+}
+
+canvas c1 {
+    name {ICS/SCADA Network - CPTC Practice}
+    refpt {0 0 47.5791667 -122.132322 2.0}
+    scale {150.0}
+    size {900 650}
+}
+
+option global {
+    interface_names no
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    show_api no
+    background_images no
+    annotations yes
+    grid yes
+    traffic_start 0
+}
+
+option session {
+}
+
+annotation a1 {
+    iconcoords {50 20 300 150}
+    type rectangle
+    label {Corporate IT (10.0.0.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #e6e6e6
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a2 {
+    iconcoords {150 200 650 320}
+    type rectangle
+    label {DMZ / Control Center (192.168.1.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ffffcc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a3 {
+    iconcoords {150 360 650 550}
+    type rectangle
+    label {OT Network (192.168.100.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ffcccc
+    width 0
+    border black
+    rad 0
+    canvas c1
+}
+
+annotation a4 {
+    iconcoords {620 480 800 600}
+    type rectangle
+    label {Air-Gapped Safety (192.168.200.0/24)}
+    labelcolor black
+    fontfamily {Arial}
+    fontsize {10}
+    color #ff9999
+    width 0
+    border red
+    rad 0
+    canvas c1
+}

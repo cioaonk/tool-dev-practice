@@ -1,0 +1,67 @@
+# =============================================================================
+# Target Workstation Container
+# =============================================================================
+# Simulates a Windows-like workstation target for network enumeration
+# and lateral movement testing.
+#
+# Features:
+# - SSH access with weak credentials
+# - Open ports for service discovery
+# - Simulated Windows-like services
+#
+# WARNING: This container is intentionally insecure.
+# =============================================================================
+
+FROM alpine:3.18
+
+LABEL maintainer="CPTC11 Team"
+LABEL description="Simulated workstation target"
+LABEL cptc11.role="workstation"
+
+# Install services
+RUN apk add --no-cache \
+    openssh \
+    openssl \
+    netcat-openbsd \
+    curl \
+    busybox-extras \
+    python3 \
+    socat \
+    && rm -rf /var/cache/apk/*
+
+# Create users with weak passwords
+RUN adduser -D -s /bin/sh user1 && echo "user1:password1" | chpasswd \
+    && adduser -D -s /bin/sh user2 && echo "user2:password2" | chpasswd \
+    && adduser -D -s /bin/sh admin && echo "admin:admin123" | chpasswd \
+    && adduser -D -s /bin/sh jsmith && echo "jsmith:Summer2024!" | chpasswd
+
+# Configure SSH
+RUN ssh-keygen -A \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && echo "root:toor" | chpasswd
+
+# Create fake Windows-like directories
+RUN mkdir -p /home/user1/Documents \
+    && mkdir -p /home/user1/Desktop \
+    && mkdir -p /home/user1/Downloads \
+    && mkdir -p /home/admin/Documents \
+    && mkdir -p /home/admin/Desktop
+
+# Create some "interesting" files
+RUN echo "Meeting notes - Q4 planning" > /home/user1/Documents/notes.txt \
+    && echo "password: Summer2024!" > /home/user1/Documents/passwords.txt \
+    && echo "VPN credentials: vpnuser:vpnpass123" > /home/admin/Documents/vpn_config.txt \
+    && echo "Database backup script" > /home/admin/Desktop/backup.sh
+
+# Set permissions
+RUN chown -R user1:user1 /home/user1 \
+    && chown -R admin:admin /home/admin
+
+# Copy startup script
+COPY scripts/workstation_start.sh /start.sh
+RUN chmod +x /start.sh
+
+EXPOSE 22 135 139 445 3389
+
+CMD ["/start.sh"]

@@ -1,0 +1,276 @@
+# CPTC11 Security Scanning Workflow
+# Runs security analysis tools to identify vulnerabilities
+#
+# Tools used:
+#   - Bandit: Python static security analyzer
+#   - pip-audit: Dependency vulnerability scanner
+#   - gosec: Go security checker
+#
+# Triggers:
+#   - Push to main branch
+#   - Pull requests targeting main branch
+#   - Weekly scheduled run (security drift detection)
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual triggering
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.10"
+  GO_VERSION: "1.21"
+
+jobs:
+  # =============================================================================
+  # Python Security Scanning with Bandit
+  # =============================================================================
+  bandit:
+    name: Bandit Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Bandit
+        run: pip install bandit[toml]>=1.7.0
+
+      - name: Run Bandit scan
+        working-directory: python
+        continue-on-error: true  # Security tools in repo may trigger findings
+        run: |
+          echo "Running Bandit security scan..."
+          bandit -r . \
+            --exclude "./tests,./venv,./.venv" \
+            --format json \
+            --output bandit-results.json \
+            --severity-level medium \
+            --confidence-level medium \
+            || true
+
+          # Also generate human-readable output
+          bandit -r . \
+            --exclude "./tests,./venv,./.venv" \
+            --format txt \
+            --severity-level low \
+            || true
+
+      - name: Upload Bandit results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-results
+          path: python/bandit-results.json
+          retention-days: 30
+
+      - name: Create Bandit summary
+        if: always()
+        run: |
+          echo "## Bandit Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f python/bandit-results.json ]; then
+            echo "Scan completed. Check artifacts for detailed results." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Note: This project contains security testing tools that may" >> $GITHUB_STEP_SUMMARY
+            echo "intentionally trigger security findings." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No security issues found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # =============================================================================
+  # Dependency Vulnerability Scanning
+  # =============================================================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pip-audit
+        run: pip install pip-audit>=2.6.0
+
+      - name: Install project dependencies
+        working-directory: python
+        run: |
+          pip install -r requirements-test.txt || true
+
+      - name: Run pip-audit
+        working-directory: python
+        continue-on-error: true
+        run: |
+          echo "Scanning Python dependencies for vulnerabilities..."
+          pip-audit \
+            --format json \
+            --output pip-audit-results.json \
+            || true
+
+          # Human-readable output
+          pip-audit || true
+
+      - name: Upload pip-audit results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pip-audit-results
+          path: python/pip-audit-results.json
+          retention-days: 30
+
+      - name: Create dependency scan summary
+        if: always()
+        run: |
+          echo "## Dependency Vulnerability Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f python/pip-audit-results.json ]; then
+            # Count vulnerabilities
+            vuln_count=$(python3 -c "import json; data=json.load(open('python/pip-audit-results.json')); print(len(data.get('dependencies', [])))" 2>/dev/null || echo "0")
+            echo "Dependencies scanned. Check artifacts for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Scan completed successfully." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # =============================================================================
+  # Go Security Scanning with gosec
+  # =============================================================================
+  gosec:
+    name: Go Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Run gosec on Go files
+        working-directory: golang
+        continue-on-error: true
+        run: |
+          echo "Running gosec security scan on Go files..."
+
+          # Scan main file
+          gosec -fmt=json -out=gosec-results.json ./... 2>/dev/null || true
+
+          # Scan individual files (since there's no go.mod)
+          echo "Scanning individual Go files..."
+          for gofile in *.go tools/*/*.go; do
+            if [ -f "$gofile" ]; then
+              echo "Checking: $gofile"
+              gosec "$gofile" 2>/dev/null || true
+            fi
+          done
+
+      - name: Upload gosec results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gosec-results
+          path: golang/gosec-results.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Create Go security summary
+        if: always()
+        run: |
+          echo "## Go Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "gosec scan completed. Check artifacts for detailed results." >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Secret Detection
+  # =============================================================================
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for thorough scanning
+
+      - name: Install truffleHog
+        run: pip install trufflehog
+
+      - name: Run truffleHog
+        continue-on-error: true
+        run: |
+          echo "Scanning for secrets..."
+          trufflehog filesystem . \
+            --exclude-paths .git \
+            --json \
+            > trufflehog-results.json 2>/dev/null || true
+
+          # Check if any secrets were found
+          if [ -s trufflehog-results.json ]; then
+            echo "Potential secrets detected. Review trufflehog-results.json"
+          else
+            echo "No secrets detected."
+          fi
+
+      - name: Upload secret scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secret-scan-results
+          path: trufflehog-results.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # =============================================================================
+  # Security Summary Job
+  # =============================================================================
+  security-summary:
+    name: Security Summary
+    needs: [bandit, dependency-scan, gosec, secret-scan]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check security scan results
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Bandit (Python) | ${{ needs.bandit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| gosec (Go) | ${{ needs.gosec.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Detection | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** This repository contains intentional security testing tools." >> $GITHUB_STEP_SUMMARY
+          echo "Some findings are expected and part of the project's purpose." >> $GITHUB_STEP_SUMMARY

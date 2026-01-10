@@ -1,0 +1,398 @@
+version: "3.8"
+
+# =============================================================================
+# CPTC11 Security Testing Environment
+# =============================================================================
+# This Docker Compose configuration creates an isolated testing environment
+# for offensive security tools. All services are intentionally configured
+# with vulnerabilities for testing purposes.
+#
+# IMPORTANT: This environment should only be used in isolated networks
+# for authorized security testing and development.
+#
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose down -v        # Stop and remove all containers and volumes
+#   docker-compose logs -f        # View logs
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Vulnerable Web Application
+  # ===========================================================================
+  vulnerable-web:
+    build:
+      context: ./vulnerable-web
+      dockerfile: Dockerfile
+    container_name: cptc11-vulnerable-web
+    hostname: vulnerable-web
+    networks:
+      dmz_network:
+        ipv4_address: 10.10.10.10
+      internal_network:
+        ipv4_address: 10.10.20.10
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      - MYSQL_HOST=mysql-server
+      - MYSQL_USER=webuser
+      - MYSQL_PASSWORD=webpass123
+      - DEBUG_MODE=true
+    volumes:
+      - web_data:/var/www/html/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "cptc11.role=vulnerable-web"
+      - "cptc11.network=dmz"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # FTP Server - Credential Testing
+  # ===========================================================================
+  ftp-server:
+    build:
+      context: ./ftp-server
+      dockerfile: Dockerfile
+    container_name: cptc11-ftp-server
+    hostname: ftp-server
+    networks:
+      dmz_network:
+        ipv4_address: 10.10.10.20
+    ports:
+      - "2121:21"
+      - "30000-30009:30000-30009"
+    environment:
+      - FTP_USER=ftpuser
+      - FTP_PASS=ftppass123
+      - FTP_USER_HOME=/home/ftpuser
+      - ANONYMOUS_ENABLE=YES
+    volumes:
+      - ftp_data:/home/ftpuser
+      - ftp_anon:/var/ftp/pub
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "21"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "cptc11.role=ftp-server"
+      - "cptc11.network=dmz"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # SMTP Server - Email Testing
+  # ===========================================================================
+  smtp-server:
+    build:
+      context: ./smtp-server
+      dockerfile: Dockerfile
+    container_name: cptc11-smtp-server
+    hostname: smtp-server
+    networks:
+      dmz_network:
+        ipv4_address: 10.10.10.30
+      internal_network:
+        ipv4_address: 10.10.20.30
+    ports:
+      - "2525:25"
+      - "587:587"
+    environment:
+      - SMTP_USER=smtpuser
+      - SMTP_PASS=smtppass123
+      - RELAY_HOST=
+      - HOSTNAME=mail.testlab.local
+    volumes:
+      - smtp_data:/var/mail
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "cptc11.role=smtp-server"
+      - "cptc11.network=dmz"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # DNS Server - Enumeration Testing
+  # ===========================================================================
+  dns-server:
+    build:
+      context: ./dns-server
+      dockerfile: Dockerfile
+    container_name: cptc11-dns-server
+    hostname: dns-server
+    networks:
+      dmz_network:
+        ipv4_address: 10.10.10.40
+      internal_network:
+        ipv4_address: 10.10.20.40
+    ports:
+      - "5353:53/udp"
+      - "5353:53/tcp"
+    environment:
+      - DOMAIN=testlab.local
+      - ALLOW_ZONE_TRANSFER=yes
+    volumes:
+      - dns_data:/etc/bind/zones
+      - ./dns-server/config:/etc/bind/config:ro
+    healthcheck:
+      test: ["CMD", "nslookup", "testlab.local", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "cptc11.role=dns-server"
+      - "cptc11.network=dmz"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # SMB Server - Share Enumeration Testing
+  # ===========================================================================
+  smb-server:
+    build:
+      context: ./smb-server
+      dockerfile: Dockerfile
+    container_name: cptc11-smb-server
+    hostname: smb-server
+    networks:
+      internal_network:
+        ipv4_address: 10.10.20.50
+    ports:
+      - "4445:445"
+      - "1139:139"
+    environment:
+      - SMB_USER=smbuser
+      - SMB_PASS=smbpass123
+      - WORKGROUP=TESTLAB
+      - SERVER_STRING=CPTC11 SMB Server
+    volumes:
+      - smb_public:/share/public
+      - smb_private:/share/private
+      - smb_backup:/share/backup
+    healthcheck:
+      test: ["CMD", "smbclient", "-L", "localhost", "-N"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "cptc11.role=smb-server"
+      - "cptc11.network=internal"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # MySQL Database - Backend Service
+  # ===========================================================================
+  mysql-server:
+    image: mysql:8.0
+    container_name: cptc11-mysql-server
+    hostname: mysql-server
+    networks:
+      internal_network:
+        ipv4_address: 10.10.20.60
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpass123
+      - MYSQL_DATABASE=webapp
+      - MYSQL_USER=webuser
+      - MYSQL_PASSWORD=webpass123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "cptc11.role=mysql-server"
+      - "cptc11.network=internal"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Target Network - Simulated Enterprise Hosts
+  # ===========================================================================
+
+  # Workstation 1 - Windows-like target
+  target-workstation-1:
+    build:
+      context: ./target-network
+      dockerfile: Dockerfile.workstation
+    container_name: cptc11-workstation-1
+    hostname: ws01
+    networks:
+      internal_network:
+        ipv4_address: 10.10.20.101
+    environment:
+      - HOSTNAME=WS01
+      - DOMAIN=testlab.local
+    labels:
+      - "cptc11.role=workstation"
+      - "cptc11.network=internal"
+    restart: unless-stopped
+
+  # Workstation 2 - Windows-like target
+  target-workstation-2:
+    build:
+      context: ./target-network
+      dockerfile: Dockerfile.workstation
+    container_name: cptc11-workstation-2
+    hostname: ws02
+    networks:
+      internal_network:
+        ipv4_address: 10.10.20.102
+    environment:
+      - HOSTNAME=WS02
+      - DOMAIN=testlab.local
+    labels:
+      - "cptc11.role=workstation"
+      - "cptc11.network=internal"
+    restart: unless-stopped
+
+  # Server 1 - Linux server target
+  target-server-1:
+    build:
+      context: ./target-network
+      dockerfile: Dockerfile.server
+    container_name: cptc11-server-1
+    hostname: srv01
+    networks:
+      internal_network:
+        ipv4_address: 10.10.20.111
+      management_network:
+        ipv4_address: 10.10.30.111
+    ports:
+      - "2222:22"
+    environment:
+      - HOSTNAME=SRV01
+      - SSH_USER=admin
+      - SSH_PASS=admin123
+    labels:
+      - "cptc11.role=server"
+      - "cptc11.network=internal,management"
+    restart: unless-stopped
+
+  # Domain Controller Simulator
+  target-dc:
+    build:
+      context: ./target-network
+      dockerfile: Dockerfile.dc
+    container_name: cptc11-dc
+    hostname: dc01
+    networks:
+      internal_network:
+        ipv4_address: 10.10.20.5
+      management_network:
+        ipv4_address: 10.10.30.5
+    environment:
+      - HOSTNAME=DC01
+      - DOMAIN=testlab.local
+      - ADMIN_PASSWORD=AdminPass123!
+    labels:
+      - "cptc11.role=domain-controller"
+      - "cptc11.network=internal,management"
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Attack Platform - Kali-like Environment
+  # ===========================================================================
+  attack-platform:
+    build:
+      context: ./attack-platform
+      dockerfile: Dockerfile
+    container_name: cptc11-attack-platform
+    hostname: attacker
+    networks:
+      dmz_network:
+        ipv4_address: 10.10.10.100
+      internal_network:
+        ipv4_address: 10.10.20.100
+    volumes:
+      - ../python:/opt/tools:ro
+      - attack_data:/root/loot
+    environment:
+      - TERM=xterm-256color
+    stdin_open: true
+    tty: true
+    labels:
+      - "cptc11.role=attack-platform"
+      - "cptc11.network=dmz,internal"
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  # DMZ Network - External-facing services
+  dmz_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
+    labels:
+      - "cptc11.network.role=dmz"
+
+  # Internal Network - Corporate network simulation
+  internal_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.20.0/24
+          gateway: 10.10.20.1
+    labels:
+      - "cptc11.network.role=internal"
+
+  # Management Network - Restricted access
+  management_network:
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.30.0/24
+          gateway: 10.10.30.1
+    labels:
+      - "cptc11.network.role=management"
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  web_data:
+    labels:
+      - "cptc11.volume.role=web-uploads"
+  ftp_data:
+    labels:
+      - "cptc11.volume.role=ftp-user"
+  ftp_anon:
+    labels:
+      - "cptc11.volume.role=ftp-anonymous"
+  smtp_data:
+    labels:
+      - "cptc11.volume.role=mail"
+  dns_data:
+    labels:
+      - "cptc11.volume.role=dns-zones"
+  smb_public:
+    labels:
+      - "cptc11.volume.role=smb-public"
+  smb_private:
+    labels:
+      - "cptc11.volume.role=smb-private"
+  smb_backup:
+    labels:
+      - "cptc11.volume.role=smb-backup"
+  mysql_data:
+    labels:
+      - "cptc11.volume.role=mysql"
+  attack_data:
+    labels:
+      - "cptc11.volume.role=attack-loot"

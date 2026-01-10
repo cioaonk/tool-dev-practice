@@ -1,0 +1,69 @@
+# =============================================================================
+# Postfix Main Configuration - Intentionally Weak for Testing
+# =============================================================================
+
+# Basic settings
+smtpd_banner = $myhostname ESMTP CPTC11 Mail Server
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+
+# TLS settings (optional, not enforced)
+smtpd_tls_cert_file = /etc/ssl/certs/mail.crt
+smtpd_tls_key_file = /etc/ssl/private/mail.key
+smtpd_use_tls = yes
+smtpd_tls_security_level = may
+smtp_tls_security_level = may
+
+# Network settings
+myhostname = mail.testlab.local
+mydomain = testlab.local
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = ipv4
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+
+# Relay configuration (intentionally permissive for testing)
+mynetworks = 127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+relay_domains = $mydestination
+relayhost =
+
+# Mailbox settings
+home_mailbox = Maildir/
+mailbox_size_limit = 51200000
+message_size_limit = 10240000
+recipient_delimiter = +
+
+# SASL Authentication (intentionally simple)
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = $myhostname
+broken_sasl_auth_clients = yes
+
+# Client restrictions (very permissive for testing)
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    permit
+
+smtpd_relay_restrictions =
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    permit
+
+smtpd_sender_restrictions =
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    permit
+
+# No HELO restrictions (weak)
+smtpd_helo_required = no
+
+# Disable various security features for testing
+disable_vrfy_command = no
+smtpd_delay_reject = no
+
+# Logging
+maillog_file = /var/log/mail.log
