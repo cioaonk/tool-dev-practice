@@ -136,6 +136,285 @@ END OF ENTRY #2
 ================================================================================
 
 ================================================================================
+CONVERSION ENTRY #3
+================================================================================
+Timestamp:        2026-01-10T16:30:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/port-scanner/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/port-scanner/scanner.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 3 dataclasses (PortResult, ScanConfig, ScanReport) to Go structs
+- Converted 2 enums (PortState, ScanType) to Go const types
+- Converted 3 scan technique classes to Go interface implementations:
+  * TCPConnectScan (with banner grabbing)
+  * TCPSYNScan (placeholder with fallback)
+  * UDPScan
+- Converted port specification parser (handles ranges, lists, keywords)
+- Converted PortScanner main class with concurrent worker pool
+- Implemented print_plan() for planning mode
+- Added comprehensive CLI using flag package
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags and methods
+2. Enum -> Go const string type with iota pattern
+3. ThreadPoolExecutor -> goroutines with WaitGroup and channels
+4. argparse -> flag package with short/long options
+5. socket.settimeout() -> net.DialTimeout()
+6. socket.recv() -> conn.Read() with SetReadDeadline
+7. typing.Optional -> Go pointer types (*float64)
+8. List comprehension -> explicit loops
+9. Dict[int,str] -> map[int]string
+
+Line Count Comparison:
+----------------------
+Python lines: ~800
+Go lines:     ~720
+Ratio:        0.90x (similar complexity due to protocol handling)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/port-scanner
+go build -o scanner scanner.go
+
+Notes:
+------
+- Port specification supports: single (80), range (1-1024), list (22,80,443), keywords (top20, top100, all)
+- TCP SYN scan requires raw sockets (elevated privileges) - falls back to connect
+- Banner grabbing implemented for HTTP ports
+- Service name database included for common ports
+- JSON output format matches Python version
+
+================================================================================
+END OF ENTRY #3
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #4
+================================================================================
+Timestamp:        2026-01-10T16:45:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/service-fingerprinter/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/service-fingerprinter/fingerprinter.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 2 dataclasses (ServiceInfo, FingerprintConfig) to Go structs
+- Converted 7 protocol probe classes to Go interface implementations:
+  * HTTPProbe (with Server header parsing)
+  * SSHProbe (banner and version extraction)
+  * FTPProbe (banner parsing, vsftpd/ProFTPD detection)
+  * SMTPProbe (Postfix/Sendmail/Exchange detection)
+  * MySQLProbe (protocol version check, MariaDB detection)
+  * RDPProbe (X.224 negotiation)
+  * GenericProbe (fallback banner grabbing)
+- Implemented SSL/TLS detection with certificate extraction
+- Converted ServiceFingerprinter main class
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags
+2. ABC abstract class -> Go interface
+3. ssl.create_default_context() -> crypto/tls.Config
+4. http.client.HTTPSConnection -> tls.DialWithDialer
+5. re.compile() -> regexp.MustCompile()
+6. re.search() -> regex.FindStringSubmatch()
+7. socket operations -> net package
+8. ThreadPoolExecutor -> goroutines + channels
+
+Line Count Comparison:
+----------------------
+Python lines: ~750
+Go lines:     ~800
+Ratio:        1.07x (Go slightly larger due to TLS handling verbosity)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/service-fingerprinter
+go build -o fingerprinter fingerprinter.go
+
+Notes:
+------
+- Version extraction uses regex patterns for major products
+- SSL info includes certificate subject, issuer, validity dates
+- Confidence scoring (0-100) for fingerprint accuracy
+- Aggressive mode tries all probes regardless of port
+- Product/version extraction for: Apache, nginx, IIS, OpenSSH, Dropbear, etc.
+
+================================================================================
+END OF ENTRY #4
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #5
+================================================================================
+Timestamp:        2026-01-10T17:00:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/web-directory-enumerator/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/web-directory-enumerator/enumerator.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 3 dataclasses (DirectoryResult, EnumConfig) to Go structs
+- Converted StatusCategory enum to Go const type
+- Converted HTTPClient class with TLS support
+- Converted DirectoryEnumerator main class with:
+  * Baseline calibration for soft 404 detection
+  * Path generation from wordlist + extensions
+  * Concurrent path checking
+  * Title extraction from HTML responses
+- Built-in default wordlist (61 common entries)
+- Implemented print_plan() for planning mode
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass with field(default_factory=...) -> Go struct with methods
+2. Enum -> Go const string type
+3. http.client.HTTPConnection -> net/http.Client
+4. urllib.parse.urlparse() -> net/url.Parse()
+5. re.search() for title -> regexp.FindStringSubmatch()
+6. Dict[str,str] -> map[string]string
+7. queue.Queue -> Go channels
+8. threading.Lock -> sync.Mutex
+
+Line Count Comparison:
+----------------------
+Python lines: ~876
+Go lines:     ~720
+Ratio:        0.82x (Go more concise with http package)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/web-directory-enumerator
+go build -o enumerator enumerator.go
+
+Notes:
+------
+- HTTP client supports custom headers, cookies, user-agent
+- Soft 404 detection via baseline response length calibration
+- Status code filtering (configurable include/exclude lists)
+- Content length filtering for false positive reduction
+- Extensions auto-prefixed with dot if missing
+- Built-in wordlist includes common admin paths, backup files, etc.
+
+================================================================================
+END OF ENTRY #5
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #6
+================================================================================
+Timestamp:        2026-01-10T17:15:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/credential-validator/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/credential-validator/validator.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 4 dataclasses (Credential, ValidationAttempt, ValidatorConfig) to Go structs
+- Converted 2 enums (Protocol, ValidationResult) to Go const types
+- Converted 6 protocol validator classes to Go interface implementations:
+  * SSHValidator (banner exchange, framework for crypto/ssh)
+  * FTPValidator (USER/PASS authentication)
+  * HTTPBasicValidator (Authorization header)
+  * HTTPFormValidator (POST form data)
+  * SMTPValidator (AUTH LOGIN)
+  * MySQLValidator (protocol detection)
+- Converted CredentialValidator main class with stop-on-success option
+- Implemented credential clearing for security
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags
+2. ABC/abstractmethod -> Go interface
+3. base64.b64encode() -> encoding/base64.StdEncoding.EncodeToString()
+4. http.client with SSL -> net/http.Client with tls.Config
+5. urllib.parse.urlencode() -> url.Values.Encode()
+6. List[Credential] -> []*Credential
+7. File reading for credentials -> bufio.Scanner
+
+Line Count Comparison:
+----------------------
+Python lines: ~1296
+Go lines:     ~1050
+Ratio:        0.81x (Go more concise with cleaner protocol handling)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/credential-validator
+go build -o validator validator.go
+
+Notes:
+------
+- Credentials loaded from: file (user:pass), single (-u/-P), or lists (-U/-W)
+- Credential cartesian product when using separate user/pass lists
+- HTTP form validator supports custom field names and success/failure strings
+- In-memory credential handling with Clear() method for security
+- Stop-on-success option for efficiency
+- OPSEC considerations documented in plan mode
+
+================================================================================
+END OF ENTRY #6
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #7
+================================================================================
+Timestamp:        2026-01-10T17:30:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/dns-enumerator/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/dns-enumerator/enumerator.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 2 dataclasses (DNSRecord, EnumConfig) to Go structs
+- Converted RecordType enum values to Go const uint16
+- Implemented DNSResolver class with raw UDP socket queries:
+  * Query packet building (RFC 1035 compliant)
+  * Response parsing with compression pointer handling
+  * Support for A, AAAA, NS, CNAME, MX, TXT, SOA, PTR records
+- Implemented ZoneTransfer class for AXFR attempts
+- Converted DNSEnumerator main class with subdomain bruteforcing
+- Built-in subdomain wordlist (80+ common entries)
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags
+2. Enum -> Go const uint16 values
+3. struct.pack/unpack -> encoding/binary package
+4. socket.socket(SOCK_DGRAM) -> net.DialTimeout("udp", ...)
+5. socket.socket(SOCK_STREAM) for AXFR -> net.DialTimeout("tcp", ...)
+6. Set[str] -> map[string]bool
+7. /etc/resolv.conf parsing -> bufio.Scanner
+8. ThreadPoolExecutor -> goroutines + channels
+
+Line Count Comparison:
+----------------------
+Python lines: ~900
+Go lines:     ~750
+Ratio:        0.83x (Go efficient with binary encoding)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/dns-enumerator
+go build -o enumerator enumerator.go
+
+Notes:
+------
+- Raw DNS query implementation (no external dependencies)
+- DNS compression pointer handling for response parsing
+- Zone transfer attempts against discovered NS records
+- System nameserver auto-detection (/etc/resolv.conf)
+- Configurable record types per subdomain query
+- Unique IP extraction from results
+
+================================================================================
+END OF ENTRY #7
+================================================================================
+
+================================================================================
 FILES SKIPPED (NOT CONVERTED)
 ================================================================================
 
