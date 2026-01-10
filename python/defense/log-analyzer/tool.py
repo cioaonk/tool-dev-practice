@@ -72,12 +72,24 @@ class LogParser(ABC):
 
     @abstractmethod
     def parse_line(self, line: str, line_number: int) -> Optional[LogEntry]:
-        """Parse a single log line."""
+        """Parse a single log line.
+
+        Args:
+            line: The raw log line to parse.
+            line_number: The line number in the source file.
+
+        Returns:
+            Parsed LogEntry if successful, None if line cannot be parsed.
+        """
         pass
 
     @abstractmethod
     def get_format_name(self) -> str:
-        """Return the format name."""
+        """Return the format name.
+
+        Returns:
+            String identifier for this log format.
+        """
         pass
 
 

@@ -264,8 +264,8 @@ MATCHES
 ## Running Tests
 
 ```bash
-# Run all tests
-cd /path/to/yara
+# Run all tests (from project root)
+cd yara
 python -m pytest tests/ -v
 
 # Or use the test script directly

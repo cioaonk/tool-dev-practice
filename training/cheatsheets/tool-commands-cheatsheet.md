@@ -1,6 +1,10 @@
 # Tool Commands Cheatsheet
 
+**Skill Level**: All Levels [B/I/A]
+
 Quick reference for all CPTC toolkit commands.
+
+> **How to use this cheatsheet**: This is a quick reference for command syntax. For understanding what these commands do and when to use them, see the relevant walkthroughs. For term definitions, see the [Glossary](../GLOSSARY.md).
 
 ---
 

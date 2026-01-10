@@ -11,9 +11,10 @@
 rule Evasion_AMSI_Bypass {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects AMSI bypass techniques"
+        description = "Detects AMSI bypass techniques including memory patching and reflection"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1562/001/"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -62,6 +63,7 @@ rule Evasion_ETW_Bypass {
         description = "Detects ETW (Event Tracing for Windows) bypass techniques"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1562/006/"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -100,9 +102,10 @@ rule Evasion_ETW_Bypass {
 rule Evasion_UAC_Bypass {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects UAC bypass techniques"
+        description = "Detects UAC bypass techniques including fodhelper, sdclt, and CMSTP"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1548/002/"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -148,9 +151,10 @@ rule Evasion_UAC_Bypass {
 rule Evasion_Process_Hollowing {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects process hollowing/RunPE technique"
+        description = "Detects process hollowing/RunPE technique for code injection"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1055/012/"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -188,9 +192,10 @@ rule Evasion_Process_Hollowing {
 rule Evasion_DLL_Injection {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects DLL injection techniques"
+        description = "Detects DLL injection techniques including classic, APC, and reflective"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1055/001/"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -236,9 +241,10 @@ rule Evasion_DLL_Injection {
 rule Evasion_Anti_Debug {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects anti-debugging techniques"
+        description = "Detects anti-debugging techniques including API checks, PEB flags, and timing"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1622/"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -285,9 +291,10 @@ rule Evasion_Anti_Debug {
 rule Evasion_Anti_VM {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects anti-VM/sandbox evasion techniques"
+        description = "Detects anti-VM/sandbox evasion techniques including vendor checks and CPUID"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1497/"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -341,9 +348,10 @@ rule Evasion_Anti_VM {
 rule Evasion_Obfuscation_Strings {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects string obfuscation techniques"
+        description = "Detects string obfuscation techniques including Base64, hex encoding, and concatenation"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1027/"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -390,9 +398,10 @@ rule Evasion_Obfuscation_Strings {
 rule Evasion_Code_Injection_Techniques {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects various code injection techniques"
+        description = "Detects advanced code injection techniques including doppelganging, herpaderping, and atom bombing"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1055/"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -496,9 +505,10 @@ rule Evasion_Living_Off_The_Land {
 rule Evasion_Timestomping {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects timestomping/timestamp manipulation"
+        description = "Detects timestomping/timestamp manipulation techniques"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1070/006/"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -537,9 +547,10 @@ rule Evasion_Timestomping {
 rule Evasion_Log_Tampering {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects log tampering and clearing techniques"
+        description = "Detects log tampering and clearing techniques for Windows and Linux"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1070/001/"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -584,9 +595,10 @@ rule Evasion_Log_Tampering {
 rule Evasion_Defense_Disabling {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects attempts to disable security defenses"
+        description = "Detects attempts to disable security defenses including Windows Defender and Firewall"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1562/"
         tlp = "amber"
         confidence = "high"
         severity = "critical"

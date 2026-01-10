@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, Optional, Any
+from typing import TYPE_CHECKING, Dict, Optional, Any, List
 
 from textual.app import ComposeResult
 from textual.screen import Screen, ModalScreen
@@ -25,6 +25,7 @@ from textual.widgets import (
 )
 from textual.binding import Binding
 from textual.reactive import reactive
+from textual.message import Message
 
 from ..widgets.docker_widgets import (
     ContainerList,
@@ -35,6 +36,7 @@ from ..widgets.docker_widgets import (
     DockerCommandRunner,
     ContainerInfo,
 )
+from ..utils.docker_targets import get_docker_target_manager, DockerTarget
 
 
 class ExecCommandModal(ModalScreen[Optional[str]]):
@@ -147,6 +149,126 @@ class ExecCommandModal(ModalScreen[Optional[str]]):
         self.action_submit()
 
 
+class ToolSelectorModal(ModalScreen[Optional[str]]):
+    """Modal dialog for selecting a tool to run against a container."""
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=True),
+    ]
+
+    DEFAULT_CSS = """
+    ToolSelectorModal {
+        align: center middle;
+        background: $surface 60%;
+    }
+
+    ToolSelectorModal #tool-selector-container {
+        width: 50;
+        height: auto;
+        max-height: 70%;
+        background: $surface;
+        border: double $warning;
+        padding: 1 2;
+    }
+
+    ToolSelectorModal #tool-selector-title {
+        text-style: bold;
+        color: $warning;
+        text-align: center;
+        padding: 1 0;
+        border-bottom: solid $secondary;
+        margin-bottom: 1;
+    }
+
+    ToolSelectorModal #tool-selector-subtitle {
+        color: $text-muted;
+        text-align: center;
+        padding: 0 0 1 0;
+    }
+
+    ToolSelectorModal .tool-btn {
+        width: 100%;
+        margin: 1 0;
+    }
+
+    ToolSelectorModal #port-scanner-btn {
+        background: $success;
+    }
+
+    ToolSelectorModal #vuln-scanner-btn {
+        background: $warning;
+    }
+
+    ToolSelectorModal #network-mapper-btn {
+        background: $primary;
+    }
+
+    ToolSelectorModal #attack-simulator-btn {
+        background: $error;
+    }
+
+    ToolSelectorModal #cancel-tool-btn {
+        margin-top: 1;
+        background: $surface-darken-2;
+    }
+    """
+
+    # Available tools for container targeting
+    AVAILABLE_TOOLS = [
+        ("Port Scanner", "port-scanner-btn", "Scan container ports"),
+        ("Vuln Scanner", "vuln-scanner-btn", "Scan for vulnerabilities"),
+        ("Network Mapper", "network-mapper-btn", "Map container network"),
+        ("Attack Simulator", "attack-simulator-btn", "Simulate attacks"),
+    ]
+
+    def __init__(self, container_name: str, container_ip: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.container_name = container_name
+        self.container_ip = container_ip
+
+    def compose(self) -> ComposeResult:
+        """Compose the tool selector modal."""
+        with Container(id="tool-selector-container"):
+            yield Static(
+                "[b]Run Tool Against Container[/b]",
+                id="tool-selector-title"
+            )
+            yield Static(
+                f"Target: {self.container_name} ({self.container_ip})",
+                id="tool-selector-subtitle"
+            )
+
+            with Vertical(id="tool-list"):
+                for tool_name, btn_id, description in self.AVAILABLE_TOOLS:
+                    yield Button(
+                        f"{tool_name} - {description}",
+                        id=btn_id,
+                        classes="tool-btn"
+                    )
+
+            yield Button("Cancel", id="cancel-tool-btn", variant="default")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle tool selection."""
+        if event.button.id == "cancel-tool-btn":
+            self.dismiss(None)
+        else:
+            # Map button IDs to tool names
+            tool_map = {
+                "port-scanner-btn": "Port Scanner",
+                "vuln-scanner-btn": "Vuln Scanner",
+                "network-mapper-btn": "Network Mapper",
+                "attack-simulator-btn": "Attack Simulator",
+            }
+            tool_name = tool_map.get(event.button.id)
+            if tool_name:
+                self.dismiss(tool_name)
+
+    def action_cancel(self) -> None:
+        """Cancel and close."""
+        self.dismiss(None)
+
+
 class DockerScreen(Screen):
     """Main Docker management screen."""
 
@@ -157,6 +279,7 @@ class DockerScreen(Screen):
         Binding("d", "compose_down", "Down All", show=True),
         Binding("l", "view_logs", "Logs", show=True),
         Binding("e", "exec_command", "Exec", show=True),
+        Binding("t", "run_tool", "Run Tool", show=True),
         Binding("s", "start_container", "Start", show=False),
         Binding("x", "stop_container", "Stop", show=False),
     ]
@@ -606,3 +729,102 @@ class DockerScreen(Screen):
             await self._stop_container(self.selected_container.name)
         else:
             self.notify("No container selected", severity="warning")
+
+    async def action_run_tool(self) -> None:
+        """Open tool selector to run a tool against the selected container."""
+        if not self.selected_container:
+            self.notify("No container selected", severity="warning")
+            return
+
+        if self.selected_container.status != "running":
+            self.notify("Container must be running to target", severity="warning")
+            return
+
+        # Get container IP from Docker target manager
+        manager = get_docker_target_manager()
+        target = await manager.get_target_by_name(self.selected_container.name)
+
+        container_ip = ""
+        if target and target.primary_ip:
+            container_ip = target.primary_ip
+        else:
+            # Fallback - try to get from container info
+            container_ip = "unknown"
+
+        # Show tool selector modal
+        modal = ToolSelectorModal(self.selected_container.name, container_ip)
+        tool_name = await self.app.push_screen_wait(modal)
+
+        if tool_name:
+            self.log_output(
+                f"Running {tool_name} against {self.selected_container.name}",
+                level="info"
+            )
+            # Navigate to dashboard and launch tool config with prefilled target
+            await self._launch_tool_with_target(tool_name, target)
+
+    async def _launch_tool_with_target(
+        self,
+        tool_name: str,
+        target: Optional[DockerTarget]
+    ) -> None:
+        """Launch a tool with the Docker target pre-filled."""
+        from ..app import DEFAULT_TOOLS
+        from ..screens.tool_config import ToolConfigScreen
+
+        # Find the tool
+        tool = None
+        for t in DEFAULT_TOOLS:
+            if t.name == tool_name:
+                tool = t
+                break
+
+        if not tool:
+            self.notify(f"Tool not found: {tool_name}", severity="error")
+            return
+
+        # Prepare prefill data
+        prefill_target: Dict[str, str] = {}
+        target_info: Optional[str] = None
+
+        if target:
+            prefill_target = {
+                "ip": target.primary_ip or "",
+                "name": target.display_name,
+            }
+            # Add first service port if available
+            if target.services:
+                first_service = target.services[0]
+                host_port = target.ports.get(first_service.port, first_service.port)
+                prefill_target["port"] = str(host_port)
+
+            target_info = f"{target.display_name} ({target.primary_ip})"
+
+        # Show tool config screen
+        config_screen = ToolConfigScreen(
+            tool,
+            prefill_target=prefill_target,
+            target_info=target_info
+        )
+        result = await self.app.push_screen_wait(config_screen)
+
+        if result:
+            # Log the action
+            self.log_output(f"Tool {tool_name} launched with config:", level="success")
+            for key, value in result.items():
+                if value:
+                    self.log_output(f"  {key}: {value}", level="info")
+
+            # Notify user to check dashboard for output
+            self.notify(
+                f"{tool_name} launched - check Dashboard for output",
+                severity="information"
+            )
+
+    # Event handler for container controls "Run Tool" button
+    async def on_container_controls_run_tool(
+        self,
+        message: ContainerControls.RunTool
+    ) -> None:
+        """Handle run tool request from controls."""
+        await self.action_run_tool()

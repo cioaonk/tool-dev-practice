@@ -2,13 +2,14 @@
 Security Toolsmith TUI - Main Application
 
 The main Textual application for the security toolsmith TUI.
+Integrates real security tool execution via subprocess with streaming output.
 """
 
 from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, List, Dict, Any
+from typing import TYPE_CHECKING, Optional, List, Dict, Any, Union
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -43,10 +44,28 @@ from .screens.tool_config import ToolConfigScreen
 from .screens.docker_screen import DockerScreen
 from .screens.network_screen import NetworkScreen
 
+# Import tool discovery and execution
+from .utils.tool_discovery import (
+    DiscoveredTool,
+    ToolRegistry,
+    get_registry,
+)
+from .utils.tool_executor import (
+    ToolExecutor,
+    ExecutionConfig,
+    ExecutionResult,
+    ExecutionStatus,
+    get_executor,
+)
+
 
 @dataclass
 class SecurityTool:
-    """Represents a security tool available in the application."""
+    """
+    Represents a security tool available in the application.
+
+    This class adapts DiscoveredTool for compatibility with existing widgets.
+    """
 
     name: str
     description: str
@@ -54,90 +73,64 @@ class SecurityTool:
     category: str
     parameters: List[Dict[str, Any]] = field(default_factory=list)
     is_running: bool = False
+    # Reference to the discovered tool for execution
+    _discovered_tool: Optional[DiscoveredTool] = field(default=None, repr=False)
 
     def __hash__(self) -> int:
         return hash(self.name)
 
+    @classmethod
+    def from_discovered(cls, discovered: DiscoveredTool) -> "SecurityTool":
+        """Create a SecurityTool from a DiscoveredTool."""
+        # Convert parameters to the format expected by ToolConfigScreen
+        parameters = []
+        for param in discovered.parameters:
+            param_dict = {
+                "name": param.name,
+                "type": param.param_type,
+                "required": param.required,
+                "description": param.description,
+            }
+            if param.default is not None:
+                param_dict["default"] = str(param.default)
+            if param.choices:
+                param_dict["choices"] = param.choices
+            parameters.append(param_dict)
 
-# Default tools available in the application
-DEFAULT_TOOLS: List[SecurityTool] = [
-    SecurityTool(
-        name="File Info",
-        description="Get file information including hash and type",
-        command="file_info.py",
-        category="Recon",
-        parameters=[
-            {"name": "filename", "type": "str", "required": True, "description": "File to analyze"}
-        ]
-    ),
-    SecurityTool(
-        name="Port Scanner",
-        description="Scan target for open ports",
-        command="port_scanner.py",
-        category="Recon",
-        parameters=[
-            {"name": "target", "type": "str", "required": True, "description": "Target IP or hostname"},
-            {"name": "ports", "type": "str", "required": False, "description": "Port range (e.g., 1-1000)"}
-        ]
-    ),
-    SecurityTool(
-        name="Network Mapper",
-        description="Map network topology and discover hosts",
-        command="network_mapper.py",
-        category="Recon",
-        parameters=[
-            {"name": "subnet", "type": "str", "required": True, "description": "Subnet to scan (CIDR)"}
-        ]
-    ),
-    SecurityTool(
-        name="Vuln Scanner",
-        description="Scan for known vulnerabilities",
-        command="vuln_scanner.py",
-        category="Vulnerability",
-        parameters=[
-            {"name": "target", "type": "str", "required": True, "description": "Target to scan"},
-            {"name": "profile", "type": "str", "required": False, "description": "Scan profile"}
-        ]
-    ),
-    SecurityTool(
-        name="Password Auditor",
-        description="Audit password strength and policies",
-        command="password_auditor.py",
-        category="Audit",
-        parameters=[
-            {"name": "hash_file", "type": "str", "required": True, "description": "File containing hashes"}
-        ]
-    ),
-    SecurityTool(
-        name="Log Analyzer",
-        description="Analyze logs for suspicious patterns",
-        command="log_analyzer.py",
-        category="Analysis",
-        parameters=[
-            {"name": "log_path", "type": "str", "required": True, "description": "Path to log file"},
-            {"name": "pattern", "type": "str", "required": False, "description": "Search pattern"}
-        ]
-    ),
-    SecurityTool(
-        name="Traffic Analyzer",
-        description="Analyze network traffic captures",
-        command="traffic_analyzer.py",
-        category="Analysis",
-        parameters=[
-            {"name": "pcap_file", "type": "str", "required": True, "description": "PCAP file to analyze"}
-        ]
-    ),
-    SecurityTool(
-        name="Attack Simulator",
-        description="Simulate attack patterns for testing",
-        command="attack_simulator.py",
-        category="Simulation",
-        parameters=[
-            {"name": "scenario", "type": "str", "required": True, "description": "Attack scenario name"},
-            {"name": "target", "type": "str", "required": True, "description": "Target system"}
-        ]
-    ),
-]
+        return cls(
+            name=discovered.display_name,
+            description=discovered.description,
+            command=str(discovered.tool_path),
+            category=discovered.category,
+            parameters=parameters,
+            _discovered_tool=discovered,
+        )
+
+
+def discover_tools() -> List[SecurityTool]:
+    """
+    Discover all available security tools from the tools directory.
+
+    Returns:
+        List of SecurityTool instances
+    """
+    registry = get_registry()
+    registry.discover()
+
+    tools = []
+    for discovered in registry.tools:
+        tool = SecurityTool.from_discovered(discovered)
+        tools.append(tool)
+
+    return tools
+
+
+# Try to discover tools, fall back to empty list if discovery fails
+try:
+    DEFAULT_TOOLS: List[SecurityTool] = discover_tools()
+except Exception as e:
+    print(f"Warning: Tool discovery failed: {e}")
+    DEFAULT_TOOLS = []
 
 
 class DashboardScreen(Screen):
@@ -158,6 +151,8 @@ class DashboardScreen(Screen):
     def __init__(self) -> None:
         super().__init__()
         self.help_visible = False
+        self._current_tool: Optional[SecurityTool] = None
+        self._executor = get_executor()
 
     def compose(self) -> ComposeResult:
         """Compose the dashboard layout."""
@@ -182,6 +177,24 @@ class DashboardScreen(Screen):
     def on_mount(self) -> None:
         """Handle mount event."""
         self.log_message("Security Toolsmith TUI initialized", level="info")
+
+        # Report discovered tools
+        if DEFAULT_TOOLS:
+            self.log_message(
+                f"Discovered {len(DEFAULT_TOOLS)} security tools",
+                level="success"
+            )
+            categories = set(t.category for t in DEFAULT_TOOLS)
+            self.log_message(
+                f"Categories: {', '.join(sorted(categories))}",
+                level="debug"
+            )
+        else:
+            self.log_message(
+                "No tools discovered - check tools directory",
+                level="warning"
+            )
+
         self.log_message("Select a tool from the left panel to begin", level="info")
         self.update_status("ready")
 
@@ -198,6 +211,8 @@ class DashboardScreen(Screen):
     def action_toggle_help(self) -> None:
         """Toggle help panel visibility."""
         self.log_message("Help: Press 'q' to quit, 'r' to refresh, 'c' to clear output", level="info")
+        self.log_message("Press 'D' for Docker screen, 'N' for Network screen", level="info")
+        self.log_message("Press 'Escape' to cancel a running tool", level="info")
 
     def action_refresh(self) -> None:
         """Refresh the display."""
@@ -209,10 +224,20 @@ class DashboardScreen(Screen):
         output_viewer.clear()
         self.log_message("Output cleared", level="info")
 
-    def action_cancel_operation(self) -> None:
+    async def action_cancel_operation(self) -> None:
         """Cancel the current operation."""
-        self.log_message("Operation cancelled", level="warning")
+        if self._current_tool and self._current_tool._discovered_tool:
+            tool_name = self._current_tool._discovered_tool.name
+            cancelled = await self._executor.cancel(tool_name)
+            if cancelled:
+                self.log_message(
+                    f"Cancelled execution of {self._current_tool.name}",
+                    level="warning"
+                )
+        else:
+            self.log_message("No operation to cancel", level="info")
         self.update_status("cancelled")
+        self._current_tool = None
 
     def action_open_docker(self) -> None:
         """Open the Docker management screen."""
@@ -241,107 +266,174 @@ class DashboardScreen(Screen):
 
     async def run_tool(self, tool: SecurityTool, params: Dict[str, str]) -> None:
         """Run a tool with the given parameters."""
+        self._current_tool = tool
         self.log_message(f"Running {tool.name}...", level="info")
         self.update_status("running", tool.name)
 
         # Log parameters (sanitized)
         for key, value in params.items():
             if value:
-                self.log_message(f"  {key}: {value}", level="debug")
+                # Don't log sensitive parameter values in full
+                display_value = value if len(value) < 50 else f"{value[:47]}..."
+                self.log_message(f"  {key}: {display_value}", level="debug")
 
-        # Simulate tool execution with async worker
-        self.run_tool_async(tool, params)
+        # Execute real tool
+        if tool._discovered_tool:
+            await self._execute_real_tool(tool, params)
+        else:
+            # Fallback for tools without discovered metadata
+            self.log_message(
+                f"Warning: {tool.name} has no executable - simulating",
+                level="warning"
+            )
+            await self._simulate_tool_execution(tool, params)
 
-    def run_tool_async(self, tool: SecurityTool, params: Dict[str, str]) -> None:
-        """Run tool execution in a worker."""
-        async def execute_tool() -> str:
-            """Simulate tool execution."""
-            # Simulate some processing time
-            await asyncio.sleep(2)
+    async def _execute_real_tool(
+        self,
+        tool: SecurityTool,
+        params: Dict[str, str]
+    ) -> None:
+        """Execute a real tool via subprocess with streaming output."""
+        discovered = tool._discovered_tool
+        if not discovered:
+            return
 
-            # Generate sample output based on tool
-            output_lines = [
-                f"=== {tool.name} Output ===",
-                f"Timestamp: {datetime.now().isoformat()}",
-                "",
-            ]
+        self.log_message(f"Executing: {discovered.tool_path}", level="debug")
 
-            if tool.name == "File Info":
-                filename = params.get("filename", "unknown")
-                output_lines.extend([
-                    f"Analyzing file: {filename}",
-                    "---",
-                    f"  File size: 1234 bytes",
-                    f"  MD5: a1b2c3d4e5f6...",
-                    f"  Type: ASCII text",
-                ])
-            elif tool.name == "Port Scanner":
-                target = params.get("target", "unknown")
-                output_lines.extend([
-                    f"Scanning target: {target}",
-                    "---",
-                    "  Port 22: OPEN (SSH)",
-                    "  Port 80: OPEN (HTTP)",
-                    "  Port 443: OPEN (HTTPS)",
-                    "  Port 3306: CLOSED",
-                ])
-            elif tool.name == "Network Mapper":
-                subnet = params.get("subnet", "unknown")
-                output_lines.extend([
-                    f"Mapping subnet: {subnet}",
-                    "---",
-                    "  Host 192.168.1.1: Gateway (ACTIVE)",
-                    "  Host 192.168.1.10: Workstation (ACTIVE)",
-                    "  Host 192.168.1.20: Server (ACTIVE)",
-                    "  Host 192.168.1.50: Unknown (INACTIVE)",
-                ])
-            else:
-                output_lines.extend([
-                    f"Tool execution simulated",
-                    "Parameters received:",
-                ])
-                for key, value in params.items():
-                    output_lines.append(f"  {key}: {value}")
+        # Check for plan mode
+        plan_mode = params.pop("plan", "false").lower() in ("true", "yes", "1")
+        if plan_mode:
+            self.log_message("[PLAN MODE] Showing execution plan only", level="warning")
 
-            output_lines.append("")
-            output_lines.append("=== Execution Complete ===")
+        config = ExecutionConfig(
+            plan_mode=plan_mode,
+            verbose=True,
+        )
 
-            return "\n".join(output_lines)
-
-        def on_complete(result: str) -> None:
-            """Handle tool completion."""
-            for line in result.split("\n"):
-                if line.startswith("==="):
-                    self.log_message(line, level="success")
-                elif line.startswith("  Port") and "OPEN" in line:
-                    self.log_message(line, level="warning")
-                elif line.startswith("  Host") and "ACTIVE" in line:
-                    self.log_message(line, level="success")
+        try:
+            # Stream output in real-time
+            async for stream_type, line in self._executor.execute_streaming(
+                discovered,
+                params,
+                config
+            ):
+                # Determine log level based on content and stream type
+                if stream_type == "stderr":
+                    level = "error"
+                elif stream_type == "status":
+                    level = "info"
+                elif stream_type == "error":
+                    level = "error"
                 else:
-                    self.log_message(line, level="info")
+                    # Parse stdout for visual cues
+                    level = self._determine_log_level(line)
 
+                self.log_message(line, level=level)
+
+            # Execution complete
             self.update_status("complete", tool.name)
+            self.log_message(f"=== {tool.name} Execution Complete ===", level="success")
 
-            # Update attack visualizer with sample data
+            # Update attack visualizer with execution data
+            self._update_visualizer(tool, params)
+
+        except Exception as e:
+            self.log_message(f"Execution error: {str(e)}", level="error")
+            self.update_status("error", tool.name)
+
+        finally:
+            self._current_tool = None
+
+    def _determine_log_level(self, line: str) -> str:
+        """Determine appropriate log level based on line content."""
+        line_lower = line.lower()
+
+        # Error indicators
+        if any(x in line_lower for x in ["error", "fail", "[!]", "exception"]):
+            return "error"
+
+        # Warning indicators
+        if any(x in line_lower for x in ["warning", "warn", "[w]", "caution"]):
+            return "warning"
+
+        # Success indicators
+        if any(x in line_lower for x in [
+            "[+]", "success", "found", "open", "alive",
+            "completed", "===", "discovered"
+        ]):
+            return "success"
+
+        # Debug/info indicators
+        if any(x in line_lower for x in ["[*]", "[i]", "info", "scanning", "checking"]):
+            return "info"
+
+        # Default
+        return "info"
+
+    def _update_visualizer(self, tool: SecurityTool, params: Dict[str, str]) -> None:
+        """Update attack visualizer with tool execution data."""
+        try:
             visualizer = self.query_one("#attack-visualizer", AttackVisualizer)
-            visualizer.add_attack_event(
-                source="Toolsmith",
-                target=params.get("target", params.get("filename", "unknown")),
-                attack_type=tool.name,
-                severity="medium"
+
+            # Determine target from parameters
+            target = (
+                params.get("target") or
+                params.get("targets") or
+                params.get("domain") or
+                params.get("host") or
+                params.get("filename") or
+                "unknown"
             )
 
-        # Use Textual's worker system
-        self.app.call_later(lambda: asyncio.create_task(self._execute_and_callback(execute_tool, on_complete)))
+            # Determine severity based on tool category
+            category_severity = {
+                "Reconnaissance": "low",
+                "Web Testing": "medium",
+                "Credential Testing": "medium",
+                "Network Services": "medium",
+                "Evasion/Payload": "high",
+                "Exploitation": "high",
+            }
+            severity = category_severity.get(tool.category, "medium")
 
-    async def _execute_and_callback(self, coro_func, callback) -> None:
-        """Execute coroutine and call callback with result."""
-        try:
-            result = await coro_func()
-            callback(result)
-        except Exception as e:
-            self.log_message(f"Error: {str(e)}", level="error")
-            self.update_status("error")
+            visualizer.add_attack_event(
+                source="Toolsmith",
+                target=target,
+                attack_type=tool.name,
+                severity=severity
+            )
+        except Exception:
+            pass  # Visualizer update is non-critical
+
+    async def _simulate_tool_execution(
+        self,
+        tool: SecurityTool,
+        params: Dict[str, str]
+    ) -> None:
+        """Fallback simulation for tools without real executables."""
+        self.log_message("=== Simulated Execution ===", level="warning")
+
+        await asyncio.sleep(1)
+
+        self.log_message(f"Tool: {tool.name}", level="info")
+        self.log_message("Parameters received:", level="info")
+
+        for key, value in params.items():
+            self.log_message(f"  {key}: {value}", level="info")
+
+        await asyncio.sleep(0.5)
+
+        self.log_message(
+            "Note: This tool does not have a real executable configured.",
+            level="warning"
+        )
+        self.log_message(
+            "Please ensure the tool exists in the tools directory.",
+            level="warning"
+        )
+
+        self.update_status("complete", tool.name)
+        self._current_tool = None
 
 
 class ToolsmithApp(App):

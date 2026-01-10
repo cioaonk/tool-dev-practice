@@ -2,87 +2,128 @@
 
 A comprehensive training program for mastering the offensive security toolkit designed for CTF and CPTC competition preparation.
 
+---
+
+> **New to security?** Start with the [Glossary](GLOSSARY.md) to understand key terms used throughout these materials.
+
+---
+
 ## Overview
 
 This training package provides structured learning materials for the CPTC offensive security toolkit, progressing from fundamental concepts through advanced techniques. All materials are designed for authorized security testing and competition environments.
+
+### Skill Level Guide
+
+Throughout these materials, content is marked with skill level indicators:
+
+| Level | Symbol | Description | Experience |
+|-------|--------|-------------|------------|
+| Beginner | **[B]** | Foundational concepts and guided exercises | 0-1 years |
+| Intermediate | **[I]** | Applied techniques with strategic guidance | 1-3 years |
+| Advanced | **[A]** | Complex scenarios requiring deep knowledge | 3+ years |
+
+**Recommended Starting Points by Experience:**
+- **Complete beginners**: Read the [Glossary](GLOSSARY.md) first, then start with Phase 1
+- **CTF experience**: Start with the Network Scanner Walkthrough
+- **Professional experience**: Review cheatsheets, focus on competition-specific labs
 
 ## Directory Structure
 
 ```
 training/
 ├── README.md                      # This file
+├── GLOSSARY.md                    # Term definitions and quick reference
 ├── walkthroughs/                  # Detailed tool guides
-│   ├── network-scanner-walkthrough.md
-│   ├── payload-generator-walkthrough.md
-│   └── edr-evasion-walkthrough.md
+│   ├── network-scanner-walkthrough.md    [B/I]
+│   ├── payload-generator-walkthrough.md  [I]
+│   └── edr-evasion-walkthrough.md        [A]
 ├── labs/                          # Hands-on exercises
-│   ├── lab-01-network-reconnaissance.md
-│   ├── lab-02-service-exploitation.md
-│   ├── lab-03-credential-attacks.md
-│   ├── lab-04-payload-delivery.md
-│   └── lab-05-evasion-techniques.md
-└── cheatsheets/                   # Quick reference cards
-    ├── tool-commands-cheatsheet.md
-    ├── network-scanning-cheatsheet.md
-    └── payload-generation-cheatsheet.md
+│   ├── lab-01-network-reconnaissance.md  [B]
+│   ├── lab-02-service-exploitation.md    [I]
+│   ├── lab-03-credential-attacks.md      [I]
+│   ├── lab-04-payload-delivery.md        [I/A]
+│   └── lab-05-evasion-techniques.md      [A]
+├── cheatsheets/                   # Quick reference cards
+│   ├── tool-commands-cheatsheet.md
+│   ├── network-scanning-cheatsheet.md
+│   └── payload-generation-cheatsheet.md
+└── feedback/                      # Training feedback reports
 ```
 
 ## Prerequisites
 
 ### Technical Requirements
 
-- Python 3.6+ installed and accessible via `python3`
+- Python 3.8+ installed and accessible via `python3`
 - Network access to target lab environment (isolated/sandboxed)
-- Root/Administrator access for certain scanning techniques
-- Basic familiarity with command-line interfaces
+- Root/Administrator access for certain scanning techniques (see note below)
+- Basic familiarity with command-line interfaces (bash, PowerShell, or cmd)
+
+> **Note on Root/Administrator Access**: Some scanning techniques (SYN scans, ARP discovery) require elevated privileges because they use raw network sockets. If you do not have root access, the tools will fall back to standard TCP connect scans, which work without special privileges but are more detectable.
 
 ### Knowledge Requirements
 
-| Skill Level | Prerequisites |
-|-------------|---------------|
-| **Beginner** | Basic networking (IP addresses, ports, protocols) |
-| | Command line navigation |
-| | Understanding of client-server architecture |
-| **Intermediate** | TCP/IP stack fundamentals |
-| | Common service protocols (HTTP, SSH, FTP, SMB) |
-| | Basic scripting (Python/Bash) |
-| **Advanced** | Operating system internals (process, memory) |
-| | Windows API and syscall concepts |
-| | Detection mechanisms (IDS/IPS, EDR, AV) |
+| Skill Level | Prerequisites | What This Means |
+|-------------|---------------|-----------------|
+| **Beginner [B]** | Basic networking | Understand what IP addresses (e.g., 192.168.1.1) and ports (e.g., 80, 443) are. See [Glossary](GLOSSARY.md) for definitions. |
+| | Command line navigation | Can open a terminal, navigate directories (cd), run commands |
+| | Client-server architecture | Know that clients request and servers respond |
+| **Intermediate [I]** | TCP/IP fundamentals | Understand the three-way handshake (SYN, SYN-ACK, ACK) |
+| | Common protocols | Know what HTTP, SSH, FTP, SMB do at a high level |
+| | Basic scripting | Can write simple Python or Bash scripts |
+| **Advanced [A]** | OS internals | Understand processes, memory management, DLLs |
+| | Windows API/syscalls | Know how applications interact with the OS kernel |
+| | Detection mechanisms | Familiar with how IDS, EDR, and AV detect threats |
+
+> **Not sure about your level?** If you do not understand most terms in the Beginner row, start with the [Glossary](GLOSSARY.md) and external resources in the Support section.
 
 ## Skill Progression Path
 
-### Phase 1: Foundation (Weeks 1-2)
+> **Visual Learning Path**: Start at Phase 1 and work through sequentially. Each phase builds on the previous.
+>
+> ```
+> Phase 1 [B]      Phase 2 [I]       Phase 3 [I]       Phase 4 [A]
+> Reconnaissance -> Enumeration  ->  Payloads     ->  Evasion
+>       |              |                |               |
+>   Network        Services         Shells          EDR Bypass
+>   Scanning       Credentials      Encoding        Syscalls
+> ```
+
+### Phase 1: Foundation (Weeks 1-2) [B]
 
 **Objective**: Master reconnaissance and enumeration techniques
+
+> **What is reconnaissance?** The information-gathering phase where you discover what systems exist and what services they run. Think of it as mapping the terrain before a journey.
 
 1. **Start Here**: Read `walkthroughs/network-scanner-walkthrough.md`
 2. **Lab Exercise**: Complete `labs/lab-01-network-reconnaissance.md`
 3. **Reference**: Keep `cheatsheets/network-scanning-cheatsheet.md` handy
 
 **Tools Covered**:
-- Network Scanner (host discovery)
-- Port Scanner (service detection)
-- DNS Enumerator (subdomain discovery)
-- Service Fingerprinter (version identification)
+- Network Scanner - discovers live hosts (which computers are on the network)
+- Port Scanner - finds open ports (which services are available)
+- DNS Enumerator - discovers subdomains (finds additional related systems)
+- Service Fingerprinter - identifies versions (what software is running)
 
 **Competencies**:
-- [ ] Perform host discovery on a /24 network
+- [ ] Perform host discovery on a /24 network (a /24 contains 256 IP addresses)
 - [ ] Identify open ports and running services
 - [ ] Enumerate DNS records and subdomains
 - [ ] Extract service version information
 
-### Phase 2: Exploitation Preparation (Weeks 3-4)
+### Phase 2: Exploitation Preparation (Weeks 3-4) [I]
 
 **Objective**: Identify and validate attack vectors
+
+> **What is enumeration?** Going deeper than reconnaissance to extract detailed information - usernames, file shares, configurations - that reveals how to gain access.
 
 1. **Lab Exercise**: Complete `labs/lab-02-service-exploitation.md`
 2. **Lab Exercise**: Complete `labs/lab-03-credential-attacks.md`
 
 **Tools Covered**:
-- SMB Enumerator (share and system enumeration)
-- Credential Validator (authentication testing)
-- Hash Cracker (offline password recovery)
+- SMB Enumerator - finds Windows file shares and system information
+- Credential Validator - tests username/password combinations against services
+- Hash Cracker - recovers passwords from hash values (one-way encrypted passwords)
 
 **Competencies**:
 - [ ] Enumerate SMB shares and permissions
@@ -90,18 +131,20 @@ training/
 - [ ] Perform dictionary attacks on hash files
 - [ ] Identify credential reuse opportunities
 
-### Phase 3: Payload Development (Weeks 5-6)
+### Phase 3: Payload Development (Weeks 5-6) [I]
 
 **Objective**: Generate and deliver payloads effectively
+
+> **What is a payload?** Code that runs on a target system to provide access. A reverse shell payload makes the target connect back to you, giving you a command line on that system.
 
 1. **Read**: `walkthroughs/payload-generator-walkthrough.md`
 2. **Lab Exercise**: Complete `labs/lab-04-payload-delivery.md`
 3. **Reference**: Use `cheatsheets/payload-generation-cheatsheet.md`
 
 **Tools Covered**:
-- Payload Generator (shell creation)
-- Shellcode Encoder (payload obfuscation)
-- Reverse Shell Handler (connection management)
+- Payload Generator - creates reverse shell code for different platforms
+- Shellcode Encoder - transforms payload to avoid detection signatures
+- Reverse Shell Handler - listens for and manages incoming shell connections
 
 **Competencies**:
 - [ ] Generate platform-appropriate reverse shells
@@ -109,23 +152,27 @@ training/
 - [ ] Set up and manage shell handlers
 - [ ] Understand payload delivery mechanisms
 
-### Phase 4: Evasion Techniques (Weeks 7-8)
+### Phase 4: Evasion Techniques (Weeks 7-8) [A]
 
 **Objective**: Bypass defensive controls
+
+> **Prerequisite Warning**: This phase requires understanding of Windows internals, memory management, and API concepts. Complete all previous phases before attempting.
+
+> **What is EDR?** Endpoint Detection and Response - advanced security software that monitors system behavior, not just known malware signatures. Evading EDR requires understanding how it detects threats.
 
 1. **Read**: `walkthroughs/edr-evasion-walkthrough.md`
 2. **Lab Exercise**: Complete `labs/lab-05-evasion-techniques.md`
 
 **Tools Covered**:
-- EDR Evasion Toolkit (bypass techniques)
-- AMSI Bypass (script execution)
-- Process Hollowing (injection techniques)
+- EDR Evasion Toolkit - generates code to bypass security monitoring
+- AMSI Bypass - allows PowerShell scripts to run without being scanned
+- Process Hollowing - hides malicious code inside legitimate processes
 
 **Competencies**:
-- [ ] Understand EDR hook mechanisms
-- [ ] Generate direct syscall stubs
-- [ ] Apply appropriate evasion techniques
-- [ ] Map techniques to MITRE ATT&CK framework
+- [ ] Understand EDR hook mechanisms (how security software intercepts API calls)
+- [ ] Generate direct syscall stubs (calling the OS kernel directly)
+- [ ] Apply appropriate evasion techniques based on target defenses
+- [ ] Map techniques to MITRE ATT&CK framework (industry-standard threat classification)
 
 ## How to Use These Materials
 
@@ -221,8 +268,8 @@ Target Lab Network (Isolated)
 # Verify Python version
 python3 --version
 
-# Test network scanner
-python3 /path/to/tools/network-scanner/tool.py 127.0.0.1 --plan
+# Test network scanner (from project root)
+python3 python/tools/network-scanner/tool.py 127.0.0.1 --plan
 
 # Verify connectivity to lab
 ping <lab-gateway-ip>
@@ -256,7 +303,7 @@ All tools and techniques in this training are for:
 
 ### Documentation
 
-- Individual tool README files in `/python/tools/<tool-name>/README.md`
+- Individual tool README files in `python/tools/<tool-name>/README.md`
 - This training guide and associated materials
 - Planning mode output for any tool (`--plan` flag)
 

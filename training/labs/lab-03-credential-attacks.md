@@ -1,6 +1,12 @@
 # Lab 03: Credential Attacks
 
+**Skill Level**: Intermediate [I]
+
 A hands-on exercise in credential validation, hash cracking, and password attacks.
+
+> **Note**: Complete Labs 01-02 before attempting this lab.
+
+---
 
 ## Lab Information
 
@@ -10,6 +16,17 @@ A hands-on exercise in credential validation, hash cracking, and password attack
 | Time Estimate | 60-90 minutes |
 | Prerequisites | Labs 01-02 completed |
 | Tools Required | credential-validator, hash-cracker |
+
+## Prerequisites Checklist
+
+Before starting, ensure you:
+
+- [ ] Completed Labs 01 and 02
+- [ ] Understand what password hashes are (one-way encrypted passwords)
+- [ ] Know basic authentication concepts (username + password)
+- [ ] Familiar with FTP and HTTP protocols at a basic level
+
+**Key Terms for This Lab**: Hash, Bruteforce, Dictionary Attack, Credential Stuffing, NTLM (see [Glossary](../GLOSSARY.md))
 
 ---
 

@@ -36,6 +36,7 @@ from ..widgets.network_widgets import (
     NodeActionPanel,
     TrafficMonitor,
 )
+from ..utils.network_targets import CoreTargetManager, NetworkTarget, NetworkSegment
 
 
 class CoreNetworkManager:
@@ -366,6 +367,174 @@ class CoreNetworkManager:
             return False, f"Error launching GUI: {str(e)}"
 
 
+# Import for tool selection - use lazy import to avoid circular dependency
+from textual.screen import ModalScreen
+from textual.widgets import OptionList
+from textual.widgets.option_list import Option
+
+if TYPE_CHECKING:
+    from ..app import SecurityTool
+
+
+def _get_default_tools():
+    """Lazy import of DEFAULT_TOOLS to avoid circular import."""
+    from ..app import DEFAULT_TOOLS
+    return DEFAULT_TOOLS
+
+
+def _get_tool_config_screen():
+    """Lazy import of ToolConfigScreen to avoid circular import."""
+    from ..screens.tool_config import ToolConfigScreen
+    return ToolConfigScreen
+
+
+class ToolSelectorModal(ModalScreen[Optional["SecurityTool"]]):
+    """
+    Modal screen for selecting a security tool to run against a network node.
+
+    Filters to show only tools that accept a target parameter.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=True),
+    ]
+
+    DEFAULT_CSS = """
+    ToolSelectorModal {
+        align: center middle;
+        background: $surface 60%;
+    }
+
+    ToolSelectorModal #selector-container {
+        width: 60;
+        height: auto;
+        max-height: 80%;
+        background: $surface;
+        border: double $primary;
+        padding: 1 2;
+    }
+
+    ToolSelectorModal #selector-title {
+        text-style: bold;
+        color: $primary;
+        text-align: center;
+        padding: 1 0;
+        border-bottom: solid $secondary;
+        margin-bottom: 1;
+    }
+
+    ToolSelectorModal #target-info {
+        color: $success;
+        text-align: center;
+        padding: 0 1;
+        border: round $success;
+        margin-bottom: 1;
+        height: auto;
+    }
+
+    ToolSelectorModal #tool-list {
+        height: auto;
+        max-height: 20;
+        border: round $secondary;
+        margin: 1 0;
+    }
+
+    ToolSelectorModal #scan-network-btn {
+        margin-top: 1;
+        width: 100%;
+        background: $warning;
+    }
+
+    ToolSelectorModal #cancel-btn {
+        margin-top: 1;
+        width: 100%;
+    }
+    """
+
+    # Tools that can target a specific IP
+    TARGET_TOOLS = ["Port Scanner", "Vuln Scanner", "Attack Simulator"]
+    # Tools that scan entire networks
+    NETWORK_TOOLS = ["Network Mapper"]
+
+    def __init__(
+        self,
+        node: NetworkNode,
+        network_cidr: Optional[str] = None,
+        *args,
+        **kwargs
+    ) -> None:
+        """
+        Initialize the tool selector.
+
+        Args:
+            node: The network node to run tools against
+            network_cidr: Optional CIDR range for network-wide scans
+        """
+        super().__init__(*args, **kwargs)
+        self.node = node
+        self.network_cidr = network_cidr
+        self._available_tools: List[SecurityTool] = []
+
+    def compose(self) -> ComposeResult:
+        """Compose the tool selector."""
+        with Container(id="selector-container"):
+            yield Static("[b]Select Tool to Run[/b]", id="selector-title")
+
+            # Show target info
+            ip_display = self.node.ip_addresses[0] if self.node.ip_addresses else "N/A"
+            yield Static(
+                f"[b]Target:[/b] {self.node.name} ({ip_display})",
+                id="target-info"
+            )
+
+            # Filter tools that accept targets
+            self._available_tools = [
+                tool for tool in _get_default_tools()
+                if tool.name in self.TARGET_TOOLS
+            ]
+
+            # Create option list
+            yield OptionList(
+                *[Option(f"{tool.name} - {tool.description}", id=tool.name)
+                  for tool in self._available_tools],
+                id="tool-list"
+            )
+
+            # Add network scan button if CIDR available
+            if self.network_cidr:
+                yield Button(
+                    f"Scan Entire Network ({self.network_cidr})",
+                    variant="warning",
+                    id="scan-network-btn"
+                )
+
+            yield Button("Cancel", variant="error", id="cancel-btn")
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        """Handle tool selection."""
+        tool_name = event.option.id
+        if tool_name:
+            for tool in self._available_tools:
+                if tool.name == tool_name:
+                    self.dismiss(tool)
+                    return
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "cancel-btn":
+            self.dismiss(None)
+        elif event.button.id == "scan-network-btn":
+            # Find Network Mapper tool
+            for tool in _get_default_tools():
+                if tool.name == "Network Mapper":
+                    self.dismiss(tool)
+                    return
+
+    def action_cancel(self) -> None:
+        """Cancel selection."""
+        self.dismiss(None)
+
+
 class NetworkScreen(Screen):
     """
     Network management screen for CORE integration.
@@ -623,19 +792,88 @@ class NetworkScreen(Screen):
         self,
         message: NodeActionPanel.RunTool
     ) -> None:
-        """Handle run tool request."""
+        """Handle run tool request - show tool selector and run selected tool."""
         node = message.node
-        self.log_message(
-            f"Run tool against {node.name} - feature coming soon",
-            level="warning"
-        )
-        # This would integrate with the tool panel from the main dashboard
-        # For now, just log the action
-        if node.ip_addresses:
+
+        if not node.ip_addresses:
             self.log_message(
-                f"Target IP: {node.ip_addresses[0]}",
+                f"Node {node.name} has no IP address to target",
+                level="error"
+            )
+            return
+
+        target_ip = node.ip_addresses[0]
+
+        # Determine network CIDR if available from the topology
+        network_cidr: Optional[str] = None
+        if self.selected_topology:
+            target_manager = CoreTargetManager(self.networks_dir)
+            segments = target_manager.get_network_ranges(self.selected_topology.path)
+            # Find the segment containing this node's IP
+            for segment in segments:
+                if segment.contains(target_ip):
+                    network_cidr = segment.cidr
+                    break
+            # If no match, use first available segment
+            if not network_cidr and segments:
+                network_cidr = segments[0].cidr
+
+        self.log_message(
+            f"Selecting tool for {node.name} ({target_ip})...",
+            level="info"
+        )
+
+        # Show tool selector modal
+        tool_selector = ToolSelectorModal(node, network_cidr=network_cidr)
+        selected_tool = await self.app.push_screen_wait(tool_selector)
+
+        if not selected_tool:
+            self.log_message("Tool selection cancelled", level="info")
+            return
+
+        self.log_message(
+            f"Selected tool: {selected_tool.name}",
+            level="info"
+        )
+
+        # Prepare prefill values based on the tool
+        prefill_values: Dict[str, str] = {}
+        target_info = f"{node.name} ({target_ip})"
+
+        if selected_tool.name == "Network Mapper":
+            # Use the network CIDR for Network Mapper
+            if network_cidr:
+                prefill_values["subnet"] = network_cidr
+                target_info = f"Network: {network_cidr}"
+        elif selected_tool.name in ("Port Scanner", "Vuln Scanner"):
+            prefill_values["target"] = target_ip
+        elif selected_tool.name == "Attack Simulator":
+            prefill_values["target"] = target_ip
+
+        # Show tool configuration with pre-filled values
+        ToolConfigScreen = _get_tool_config_screen()
+        config_screen = ToolConfigScreen(
+            tool=selected_tool,
+            prefill_target=prefill_values,
+            target_info=target_info
+        )
+        result = await self.app.push_screen_wait(config_screen)
+
+        if result:
+            # User confirmed - log the action (actual execution would happen in dashboard)
+            self.log_message(
+                f"Running {selected_tool.name} against {target_info}...",
+                level="success"
+            )
+            for key, value in result.items():
+                if value:
+                    self.log_message(f"  {key}: {value}", level="debug")
+            self.log_message(
+                "Tool execution initiated. Check Dashboard for results.",
                 level="info"
             )
+        else:
+            self.log_message("Tool configuration cancelled", level="info")
 
     # ----- Actions -----
 

@@ -1,6 +1,10 @@
 # Network Scanning Cheatsheet
 
+**Skill Level**: Beginner to Intermediate [B/I]
+
 Quick reference for reconnaissance and enumeration.
+
+> **Before using this cheatsheet**: Understand what you are doing. Read the [Network Scanner Walkthrough](../walkthroughs/network-scanner-walkthrough.md) first. For term definitions, see the [Glossary](../GLOSSARY.md).
 
 ---
 
@@ -252,32 +256,35 @@ cat ports.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('\n'
 
 ## OPSEC Notes
 
+> **OPSEC** (Operational Security): Practices to avoid detection during security testing.
+
 ### What Gets Logged
 
-| Action | Visibility |
-|--------|------------|
-| TCP Connect | Full connection logs |
-| Port scan | Connection attempts logged |
-| Banner grab | Application logs |
-| DNS query | DNS server logs |
-| SMB enum | Windows Security logs |
+| Action | Visibility | Who Sees It |
+|--------|------------|-------------|
+| TCP Connect | Full connection logs | Target system administrators |
+| Port scan | Connection attempts logged | IDS/IPS, firewalls |
+| Banner grab | Application logs | Application administrators |
+| DNS query | DNS server logs | Network administrators |
+| SMB enum | Windows Security logs | Domain administrators, SIEM |
 
 ### Detection Triggers
 
-| Pattern | Detection |
-|---------|-----------|
-| Sequential port scan | IDS alert |
-| High volume | Rate limiting |
-| Full port scan | Firewall alert |
-| SMB enum | SIEM correlation |
+| Pattern | Detection | Consequence |
+|---------|-----------|-------------|
+| Sequential port scan | IDS alert | Your IP may be blocked |
+| High volume | Rate limiting | Scans become slow/fail |
+| Full port scan | Firewall alert | Investigation triggered |
+| SMB enum | SIEM correlation | High-priority alert |
 
 ### Minimizing Detection
 
-- Use delays between probes
-- Randomize port order (default)
-- Lower thread count
-- Target only necessary ports
-- Use planning mode first
+- Use delays between probes (`--delay-min`, `--delay-max`)
+- Randomize port order (default behavior)
+- Lower thread count (`--threads 1` or `--threads 2`)
+- Target only necessary ports (do not scan all 65535 unless required)
+- Use planning mode first (`--plan`) to understand what will happen
+- Consider time of day (business hours have more normal traffic to blend into)
 
 ---
 

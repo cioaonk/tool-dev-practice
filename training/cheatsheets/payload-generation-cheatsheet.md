@@ -1,6 +1,12 @@
 # Payload Generation Cheatsheet
 
+**Skill Level**: Intermediate [I]
+
 Quick reference for payload creation, encoding, and delivery.
+
+> **Before using this cheatsheet**: Understand payload concepts by reading the [Payload Generator Walkthrough](../walkthroughs/payload-generator-walkthrough.md) first. For term definitions, see the [Glossary](../GLOSSARY.md).
+
+> **Safety**: Only generate payloads for authorized testing. Test in isolated lab environments.
 
 ---
 
@@ -312,23 +318,37 @@ powershell -ExecutionPolicy Bypass -enc <payload>
 
 ## OPSEC Notes
 
+> **OPSEC** (Operational Security): Practices to avoid detection during security testing.
+
 ### Handler Visibility
 
-- Listening ports visible in netstat/ss
-- Consider using common ports (80, 443)
-- SSL reduces content inspection
+- Listening ports visible in netstat/ss on your attack machine
+- Consider using common ports (80, 443) to blend in
+- SSL reduces content inspection by network security devices
+- **Detection Awareness**: Network monitoring may alert on unusual outbound connections from targets
 
 ### Payload Artifacts
 
-- Encoded payloads leave traces in logs
-- Web shells leave files on disk
-- Consider cleanup procedures
+- Encoded payloads leave traces in logs (PowerShell logs Base64 decoding)
+- Web shells leave files on disk (forensic evidence)
+- Consider cleanup procedures after testing
+- **Detection Awareness**: Windows Defender and AMSI may log payload content even if execution fails
 
 ### Traffic Patterns
 
-- Raw reverse shells have distinct patterns
-- SSL/TLS helps avoid inspection
-- Consider DNS/HTTP tunneling for strict egress
+- Raw reverse shells have distinct patterns (bidirectional TCP with shell-like timing)
+- SSL/TLS helps avoid deep packet inspection
+- Consider DNS/HTTP tunneling for environments with strict egress filtering
+- **Detection Awareness**: Modern EDRs correlate process behavior with network connections
+
+### What Defenders See
+
+| Action | Logged By | Detection Likelihood |
+|--------|-----------|---------------------|
+| PowerShell reverse shell | Event ID 4104 (Script Block Logging) | HIGH |
+| Python reverse shell | Process creation, network connection | MEDIUM |
+| Web shell upload | Web server logs, file integrity monitoring | HIGH |
+| Encoded payload execution | AMSI logs, behavioral analysis | MEDIUM |
 
 ---
 

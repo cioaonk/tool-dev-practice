@@ -11,9 +11,10 @@
 rule Shellcode_Windows_x86_Egghunter {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects Windows x86 egghunter shellcode"
+        description = "Detects Windows x86 egghunter shellcode patterns"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -44,9 +45,10 @@ rule Shellcode_Windows_x86_Egghunter {
 rule Shellcode_Windows_x86_Reverse_Shell {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects Windows x86 reverse shell shellcode patterns"
+        description = "Detects Windows x86 reverse shell shellcode patterns via PEB and socket APIs"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -85,9 +87,10 @@ rule Shellcode_Windows_x86_Reverse_Shell {
 rule Shellcode_Windows_x64_Reverse_Shell {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects Windows x64 reverse shell shellcode patterns"
+        description = "Detects Windows x64 reverse shell shellcode patterns via GS segment PEB access"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -124,9 +127,10 @@ rule Shellcode_Windows_x64_Reverse_Shell {
 rule Shellcode_Linux_x86_Reverse_Shell {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects Linux x86 reverse shell shellcode"
+        description = "Detects Linux x86 reverse shell shellcode via int 0x80 syscalls"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -161,9 +165,10 @@ rule Shellcode_Linux_x86_Reverse_Shell {
 rule Shellcode_Linux_x64_Reverse_Shell {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects Linux x64 reverse shell shellcode"
+        description = "Detects Linux x64 reverse shell shellcode via syscall instruction"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -206,9 +211,10 @@ rule Shellcode_Linux_x64_Reverse_Shell {
 rule Shellcode_Encoded_XOR {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects XOR-encoded shellcode with decoder stub"
+        description = "Detects XOR-encoded shellcode with decoder stub (jmp-call-pop and fnstenv)"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -243,9 +249,10 @@ rule Shellcode_Encoded_XOR {
 rule Shellcode_Encoded_AlphaNumeric {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects alphanumeric encoded shellcode"
+        description = "Detects alphanumeric encoded shellcode (Alpha2 and mixed encoding)"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -279,9 +286,10 @@ rule Shellcode_Encoded_AlphaNumeric {
 rule Shellcode_Encoded_Base64 {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects base64-encoded shellcode patterns"
+        description = "Detects base64-encoded shellcode patterns (PE, ELF, and common payloads)"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -320,9 +328,10 @@ rule Shellcode_Encoded_Base64 {
 rule Shellcode_Staged_Loader {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects staged shellcode loader patterns"
+        description = "Detects staged shellcode loader patterns via VirtualAlloc and memory copy"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -368,9 +377,10 @@ rule Shellcode_Staged_Loader {
 rule Shellcode_NOP_Sled {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects NOP sled patterns commonly used in exploits"
+        description = "Detects NOP sled patterns commonly used in exploits (classic and alternative)"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -436,9 +446,10 @@ rule Shellcode_Metasploit_Shikata {
 rule Shellcode_Cobalt_Strike_Beacon {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects Cobalt Strike beacon shellcode patterns"
+        description = "Detects Cobalt Strike beacon shellcode patterns including API hashing"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://www.cobaltstrike.com/"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -475,9 +486,10 @@ rule Shellcode_Cobalt_Strike_Beacon {
 rule Shellcode_Process_Injection_Setup {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects shellcode preparing for process injection"
+        description = "Detects shellcode preparing for process injection via OpenProcess and WriteProcessMemory"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://attack.mitre.org/techniques/T1055/"
         tlp = "amber"
         confidence = "medium"
         severity = "critical"

@@ -203,7 +203,13 @@ class AuditResult:
 class FileCollector:
     """Collect file information for baseline."""
 
-    def __init__(self, paths: List[str], exclude_patterns: List[str] = None):
+    def __init__(self, paths: List[str], exclude_patterns: Optional[List[str]] = None):
+        """Initialize the file collector.
+
+        Args:
+            paths: List of file or directory paths to collect.
+            exclude_patterns: Optional list of glob patterns to exclude.
+        """
         self.paths = paths
         self.exclude_patterns = exclude_patterns or []
 

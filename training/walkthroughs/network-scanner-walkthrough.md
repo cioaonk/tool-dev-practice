@@ -1,11 +1,33 @@
 # Network Scanner Walkthrough
 
+**Skill Level**: Beginner to Intermediate [B/I]
+
 A comprehensive guide to network reconnaissance using the CPTC toolkit scanning utilities.
+
+> **New to security?** Review the [Glossary](../GLOSSARY.md) for definitions of technical terms used in this walkthrough.
+
+---
+
+## Prerequisites
+
+Before starting this walkthrough, ensure you:
+
+- [ ] Have Python 3.8+ installed (`python3 --version`)
+- [ ] Can access the tools directory
+- [ ] Understand what an IP address is (e.g., 192.168.1.1)
+- [ ] Know how to use a command-line terminal
+- [ ] Have read permission for the lab network (authorized testing only)
+
+**Recommended Reading**: [Glossary](../GLOSSARY.md) entries for: Port, Protocol, TCP, CIDR, Reconnaissance
+
+---
 
 ## Module Overview
 
 ### Purpose
 Master network reconnaissance techniques essential for identifying live hosts, open ports, and running services in target environments. These skills form the foundation of any penetration test or CTF competition.
+
+> **What is reconnaissance?** The process of gathering information about a target network before attempting to gain access. Good reconnaissance is like scouting a location before a trip - it helps you know what to expect.
 
 ### Learning Objectives
 By completing this walkthrough, you will be able to:
@@ -45,50 +67,63 @@ Thorough Recon    -> Complete visibility        -> Maximum exploitation options
 
 #### How TCP Connect Scanning Works
 
+> **Key Terms**:
+> - **SYN** (Synchronize): "Hello, I want to connect"
+> - **ACK** (Acknowledge): "I received your message"
+> - **RST** (Reset): "Connection refused/closed"
+
+**When the port is OPEN** (service is listening):
 ```
 Your Machine                    Target (port open)
     |                                |
-    | -------- SYN ---------------> |
+    | -------- SYN ---------------> |  Step 1: You say "Hello"
     |                                |
-    | <------- SYN/ACK ------------ |
+    | <------- SYN/ACK ------------ |  Step 2: Server says "Hello back, ready"
     |                                |
-    | -------- ACK ---------------> |
+    | -------- ACK ---------------> |  Step 3: You say "Great, connected"
     |                                |
     [Connection Established - Port Open]
 ```
 
+**When the port is CLOSED** (no service listening):
 ```
 Your Machine                    Target (port closed)
     |                                |
-    | -------- SYN ---------------> |
+    | -------- SYN ---------------> |  Step 1: You say "Hello"
     |                                |
-    | <------- RST ---------------- |
+    | <------- RST ---------------- |  Step 2: Server says "Go away"
     |                                |
     [Connection Refused - Port Closed]
 ```
 
 #### Scanning Method Comparison
 
-| Method | Speed | Stealth | Accuracy | Privileges |
-|--------|-------|---------|----------|------------|
-| TCP Connect | Medium | Low | High | None |
-| TCP SYN | Fast | Medium | High | Root |
-| UDP | Slow | Medium | Low | Root |
-| ARP | Fast | High (LAN) | High | Root |
-| DNS | Fast | High | Medium | None |
+| Method | Speed | Stealth | Accuracy | Privileges | Best For |
+|--------|-------|---------|----------|------------|----------|
+| TCP Connect | Medium | Low | High | None | General use, beginners |
+| TCP SYN | Fast | Medium | High | Root | Fast scans when you have admin access |
+| UDP | Slow | Medium | Low | Root | Finding services like DNS, SNMP |
+| ARP | Fast | High (LAN) | High | Root | Local network discovery only |
+| DNS | Fast | High | Medium | None | Finding hostnames without direct probing |
 
-### Operational Security Considerations
+> **Note on Privileges**: "Root" means administrator access on Linux/Mac or elevated cmd/PowerShell on Windows. Without root privileges, tools will use TCP Connect which works but creates more log entries on the target.
+
+### Operational Security (OPSEC) Considerations
+
+> **What is OPSEC?** Operational Security means being aware of what traces you leave behind. In security testing, this affects whether defenders detect your activities.
 
 Every network scan leaves traces. Understanding what traces you leave helps you make informed decisions about scan aggressiveness.
 
 #### What Gets Logged
 
-| Action | Logged By | Log Location |
-|--------|-----------|--------------|
-| TCP Connect | Target OS | System/Security logs |
-| DNS Query | DNS Server | Query logs |
-| ARP Request | Network devices | ARP tables (temporary) |
-| Failed Auth | Applications | Application logs |
+| Action | Logged By | Log Location | Detection Risk |
+|--------|-----------|--------------|----------------|
+| TCP Connect | Target OS | System/Security logs | HIGH - Full connection recorded |
+| DNS Query | DNS Server | Query logs | LOW - Common traffic |
+| ARP Request | Network devices | ARP tables (temporary) | LOW - Normal network traffic |
+| Failed Auth | Applications | Application logs | HIGH - May trigger alerts |
+
+> **Competition Note**: In CPTC, aggressive scanning may trigger defensive alerts and cost points. Always consider stealth requirements in competition rules.
 
 #### Stealth Continuum
 
@@ -96,7 +131,15 @@ Every network scan leaves traces. Understanding what traces you leave helps you 
 More Stealthy                                    Less Stealthy
 <---------------------------------------------------------->
 DNS Lookup | ARP (LAN) | Slow TCP | Fast TCP | All Ports
+   |            |           |          |           |
+ Least      Only works   Adds      High        Maximum
+ intrusive   locally    delays    traffic      noise
 ```
+
+**When to use each approach:**
+- **Competition with stealth scoring**: Use slow TCP with delays
+- **CTF with time pressure**: Fast TCP on common ports
+- **Real engagement**: Start stealthy, escalate if needed
 
 ---
 
@@ -182,7 +225,7 @@ python3 tool.py 192.168.1.0/24 --verbose
 
 #### Pattern 3: Stealthy Scanning
 
-For environments with monitoring:
+For environments with monitoring (when detection avoidance matters):
 
 ```bash
 # Slow scan with randomized delays
@@ -195,9 +238,16 @@ python3 tool.py 192.168.1.0/24 \
 ```
 
 **Why these options:**
-- `--delay-min 2 --delay-max 10`: Random 2-10 second delays evade rate-based detection
+- `--delay-min 2 --delay-max 10`: Random 2-10 **second** delays evade rate-based detection
 - `--threads 2`: Low parallelism reduces traffic spikes
 - Sequential probes blend with normal network traffic
+
+> **OPSEC Note**: IDS/IPS systems often trigger alerts based on:
+> - Many connections in a short time period
+> - Sequential port scanning (port 1, 2, 3, 4...)
+> - Connections to many hosts rapidly
+>
+> The stealth options help avoid these detection patterns, but increase scan time significantly.
 
 ### Advanced Usage
 
@@ -361,15 +411,17 @@ OPEN PORTS:
 
 ### Port Specification Reference
 
-| Specification | Example | Ports Scanned |
-|--------------|---------|---------------|
-| Single | `80` | 80 |
-| Range | `1-100` | 1 through 100 |
-| List | `22,80,443` | 22, 80, 443 |
-| Combined | `22,80,8000-8100` | 22, 80, 8000-8100 |
-| Preset | `top20` | 20 most common |
-| Preset | `top100` | 100 most common |
-| All | `all` | 1-65535 |
+| Specification | Example | Ports Scanned | Use Case |
+|--------------|---------|---------------|----------|
+| Single | `80` | 80 | Testing specific service |
+| Range | `1-100` | 1 through 100 | Scanning segment |
+| List | `22,80,443` | 22, 80, 443 | Known services |
+| Combined | `22,80,8000-8100` | 22, 80, 8000-8100 | Mixed approach |
+| Preset | `top20` | 20 most common | Quick survey |
+| Preset | `top100` | 100 most common | Standard scan |
+| All | `all` | 1-65535 | Comprehensive (slow) |
+
+> **What is "top20" or "top100"?** These are the most commonly open ports across the internet based on research. They include services like HTTP (80), HTTPS (443), SSH (22), and SMB (445). Using presets saves time by checking likely targets first.
 
 ### Stealth Scanning Techniques
 

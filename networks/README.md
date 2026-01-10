@@ -388,3 +388,7 @@ networks/
 These network topologies are provided for educational and training purposes only. Do not use these configurations in production environments.
 
 Created for CPTC penetration testing practice.
+
+---
+
+*Last updated: January 2026*

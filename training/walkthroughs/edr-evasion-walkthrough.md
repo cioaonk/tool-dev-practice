@@ -1,11 +1,35 @@
 # EDR Evasion Walkthrough
 
+**Skill Level**: Advanced [A]
+
 A comprehensive guide to understanding and applying EDR evasion techniques for CTF and CPTC competitions.
+
+> **Warning**: This is an advanced module. Complete all previous phases before attempting this content.
+
+---
+
+## Prerequisites Check
+
+**Stop here if you cannot answer YES to all of these:**
+
+- [ ] Completed the Payload Generator Walkthrough
+- [ ] Understand what a process is in Windows (a running program)
+- [ ] Know what memory allocation means (getting space in RAM)
+- [ ] Understand the concept of APIs (functions programs call to do things)
+- [ ] Know what a DLL is (code library used by Windows programs)
+
+**If you answered NO to any question**, review:
+- [Glossary](../GLOSSARY.md) entries for: DLL, Kernel, Syscall, Hook, EDR, AMSI
+- External resources on Windows internals basics
+
+---
 
 ## Module Overview
 
 ### Purpose
 Understand Endpoint Detection and Response (EDR) mechanisms and learn techniques to evade detection during authorized security assessments. This advanced module covers the theory and application of modern evasion techniques.
+
+> **What is EDR?** Endpoint Detection and Response is advanced security software that monitors everything your computer does - process creation, memory access, network connections, file operations. Unlike antivirus (which looks for known bad files), EDR looks for suspicious BEHAVIORS.
 
 ### Learning Objectives
 By completing this walkthrough, you will be able to:
@@ -19,10 +43,16 @@ By completing this walkthrough, you will be able to:
 - Reading: 90 minutes
 - Hands-on Practice: 3-4 hours
 
-### Prerequisites
-- Completed Payload Generator Walkthrough
-- Understanding of Windows architecture (processes, memory, DLLs)
-- Basic knowledge of x86/x64 assembly helpful but not required
+### Key Terms for This Module
+
+| Term | Definition |
+|------|------------|
+| **EDR** | Endpoint Detection and Response - advanced security monitoring |
+| **Hook** | Code that intercepts function calls to inspect them |
+| **Syscall** | Direct request to the operating system kernel |
+| **User-mode** | Normal application space (restricted permissions) |
+| **Kernel-mode** | Operating system core (full permissions) |
+| **ntdll.dll** | Windows DLL containing syscall interfaces |
 
 ### Disclaimer
 
@@ -123,26 +153,36 @@ YOUR CODE (Direct Syscall)                          KERNEL
 
 **Important Limitation**: Kernel-mode telemetry still applies. ETW (Event Tracing for Windows) and kernel callbacks can still detect activity.
 
+> **Critical OPSEC Understanding**: Direct syscalls bypass the interception point (user-mode hooks) but the RESULT of your actions (process created, memory allocated, file written) is still visible to kernel-level monitoring. Syscalls are not invisibility - they are just one detection bypass.
+
 ### Detection Layers Deep-Dive
+
+Understanding these layers is crucial for realistic expectations:
 
 #### Layer 1: User-Mode Hooks
 - **What**: Inline hooks in ntdll.dll, kernel32.dll
 - **Bypassed by**: Direct syscalls, unhooking
+- **Detection coverage**: ~40% of EDR visibility
 
 #### Layer 2: Kernel Callbacks
 - **What**: PsSetCreateProcessNotifyRoutine, etc.
 - **Sees**: Process/thread creation, image loads
 - **Bypassed by**: Nothing from user-mode (kernel lives above)
+- **Detection coverage**: ~30% of EDR visibility
 
 #### Layer 3: ETW (Event Tracing for Windows)
 - **What**: System-wide event logging
 - **Sees**: .NET, PowerShell, process events
 - **Bypassed by**: ETW patching (in-process only)
+- **Detection coverage**: ~20% of EDR visibility
 
 #### Layer 4: Behavioral Analysis
 - **What**: ML models analyzing patterns
 - **Sees**: Sequences of suspicious activities
 - **Bypassed by**: Blending in, living-off-the-land
+- **Detection coverage**: ~10% but catches novel attacks
+
+> **Detection Awareness Summary**: Even with perfect user-mode evasion, 50-60% of EDR detection capability remains active. Plan accordingly.
 
 ---
 
@@ -228,6 +268,13 @@ MITRE ATT&CK:
 Risk Level: High
 ```
 
+> **How Defenders Detect Direct Syscalls**:
+> 1. **Call stack analysis**: Normal calls go through ntdll.dll. Direct syscalls have unusual call stacks.
+> 2. **Code location**: Syscall instructions should only be in system DLLs, not your executable.
+> 3. **Behavioral patterns**: The sequence allocate-write-execute is suspicious regardless of method.
+>
+> Modern EDRs like CrowdStrike and Microsoft Defender for Endpoint specifically detect direct syscall patterns.
+
 ### Working with Syscalls
 
 #### Listing Available Syscalls
@@ -284,6 +331,8 @@ Detection Notes:
   - Remote process allocations highly suspicious
   - Often followed by NtWriteVirtualMemory
 ```
+
+> **OPSEC Warning**: The syscall numbers shown are for specific Windows versions. Windows 11 has different syscall numbers than Windows 10, and even Windows 10 builds vary. Using wrong syscall numbers will crash the program. Always verify the target OS version.
 
 ### Generating Syscall Stubs
 

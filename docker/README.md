@@ -2,9 +2,9 @@
 
 This directory contains a complete Docker-based testing environment for the CPTC11 offensive security toolkit. All services are intentionally configured with vulnerabilities for authorized security testing and tool development.
 
-## WARNING
+## Warning
 
-**This environment contains intentionally vulnerable services. It should only be used in isolated networks for authorized security testing and development purposes. Never expose these services to untrusted networks or the public internet.**
+**This environment contains intentionally vulnerable services.** It should only be used in isolated networks for authorized security testing and development purposes. Never expose these services to untrusted networks or the public internet.
 
 ## Quick Start
 
@@ -316,7 +316,7 @@ docker/
 
 ## Integration with CI/CD
 
-See `/Users/ic/cptc11/python/tests/docker_integration/` for automated tests that run against this environment.
+See `python/tests/docker_integration/` for automated tests that run against this environment.
 
 ## License
 

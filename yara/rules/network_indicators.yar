@@ -11,9 +11,10 @@
 rule Network_C2_Beacon_Pattern {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects generic C2 beacon communication patterns"
+        description = "Detects generic C2 beacon communication patterns including check-ins and task retrieval"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -53,9 +54,10 @@ rule Network_C2_Beacon_Pattern {
 rule Network_HTTP_Suspicious_Headers {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects suspicious HTTP header patterns in files"
+        description = "Detects suspicious HTTP header patterns commonly used in C2 communication"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -97,9 +99,10 @@ rule Network_HTTP_Suspicious_Headers {
 rule Network_DNS_Tunneling_Indicators {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects DNS tunneling indicators"
+        description = "Detects DNS tunneling indicators including tools and encoding patterns"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -140,9 +143,10 @@ rule Network_DNS_Tunneling_Indicators {
 rule Network_Reverse_Shell_Connection {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects reverse shell network connection patterns"
+        description = "Detects reverse shell network connection patterns and netcat usage"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "critical"
@@ -186,9 +190,10 @@ rule Network_Reverse_Shell_Connection {
 rule Network_Exfiltration_Patterns {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects data exfiltration patterns"
+        description = "Detects data exfiltration patterns including cloud upload and steganography"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -237,9 +242,10 @@ rule Network_Exfiltration_Patterns {
 rule Network_Proxy_Tunnel_Config {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects proxy and tunnel configuration patterns"
+        description = "Detects proxy and tunnel configuration patterns including SOCKS, SSH, and ngrok"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -290,9 +296,10 @@ rule Network_Proxy_Tunnel_Config {
 rule Network_SMB_Lateral_Movement {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects SMB lateral movement indicators"
+        description = "Detects SMB lateral movement indicators including PsExec and WMI"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -343,6 +350,7 @@ rule Network_RDP_Indicators {
         description = "Detects RDP tunneling and abuse indicators"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "medium"
@@ -385,9 +393,10 @@ rule Network_RDP_Indicators {
 rule Network_Suspicious_Port_Patterns {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects suspicious port usage patterns"
+        description = "Detects suspicious port usage patterns commonly associated with malware"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "low"
         severity = "medium"
@@ -430,9 +439,10 @@ rule Network_Suspicious_Port_Patterns {
 rule Network_TOR_Usage {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects TOR network usage indicators"
+        description = "Detects TOR network usage indicators including .onion addresses and configuration"
         date = "2026-01-10"
         version = "1.0"
+        reference = "https://www.torproject.org/"
         tlp = "amber"
         confidence = "high"
         severity = "medium"
@@ -476,9 +486,10 @@ rule Network_TOR_Usage {
 rule Network_ICMP_Tunneling {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects ICMP tunneling indicators"
+        description = "Detects ICMP tunneling indicators including common tools and raw socket usage"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -521,6 +532,7 @@ rule Network_WebSocket_C2 {
         description = "Detects WebSocket-based C2 communication patterns"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"

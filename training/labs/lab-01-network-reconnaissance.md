@@ -1,6 +1,12 @@
 # Lab 01: Network Reconnaissance
 
+**Skill Level**: Beginner [B]
+
 A hands-on exercise in network discovery, port scanning, and service enumeration.
+
+> **First lab?** This is the recommended starting point for the training program.
+
+---
 
 ## Lab Information
 
@@ -10,6 +16,18 @@ A hands-on exercise in network discovery, port scanning, and service enumeration
 | Time Estimate | 60-90 minutes |
 | Prerequisites | Network Scanner Walkthrough |
 | Tools Required | network-scanner, port-scanner, service-fingerprinter, dns-enumerator |
+
+## Prerequisites Checklist
+
+Before starting, ensure you:
+
+- [ ] Read the [Network Scanner Walkthrough](../walkthroughs/network-scanner-walkthrough.md)
+- [ ] Have Python 3.8+ installed
+- [ ] Can access the tools from the project directory
+- [ ] Understand what IP addresses and ports are (see [Glossary](../GLOSSARY.md))
+- [ ] Have authorization to scan the target network
+
+**Key Terms for This Lab**: Reconnaissance, Port, Service, CIDR, Enumeration (see [Glossary](../GLOSSARY.md))
 
 ---
 

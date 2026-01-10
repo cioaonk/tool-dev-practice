@@ -29,7 +29,7 @@ The framework provides:
 ## Directory Structure
 
 ```
-/Users/ic/cptc11/
+cptc11/
 |-- README.md                           # This file
 |-- .gitignore                          # Git ignore rules
 |-- conversion_log.txt                  # Python-to-Golang conversion tracking

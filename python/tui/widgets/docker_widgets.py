@@ -550,6 +550,10 @@ class ContainerControls(Widget):
         background: $secondary;
     }
 
+    ContainerControls #run-tool-btn {
+        background: $warning;
+    }
+
     ContainerControls .compose-controls {
         border-top: solid $secondary;
         padding-top: 1;
@@ -603,6 +607,12 @@ class ContainerControls(Widget):
         """Request to stop all compose services."""
         pass
 
+    class RunTool(Message):
+        """Request to run a tool against the selected container."""
+        def __init__(self, container_name: str) -> None:
+            self.container_name = container_name
+            super().__init__()
+
     # Reactive attributes
     selected_container: reactive[Optional[str]] = reactive(None)
 
@@ -623,6 +633,9 @@ class ContainerControls(Widget):
             yield Button("Logs", id="logs-btn", disabled=True)
             yield Button("Exec", id="exec-btn", disabled=True)
 
+        with Horizontal(classes="control-row"):
+            yield Button("Run Tool", id="run-tool-btn", disabled=True)
+
         # Compose-wide controls
         with Vertical(classes="compose-controls"):
             yield Static("[dim]Compose Environment[/dim]", id="compose-title")
@@ -634,7 +647,7 @@ class ContainerControls(Widget):
         """Enable/disable buttons based on selection."""
         has_selection = container_name is not None
 
-        for btn_id in ["start-btn", "stop-btn", "restart-btn", "logs-btn", "exec-btn"]:
+        for btn_id in ["start-btn", "stop-btn", "restart-btn", "logs-btn", "exec-btn", "run-tool-btn"]:
             btn = self.query_one(f"#{btn_id}", Button)
             btn.disabled = not has_selection
 
@@ -650,6 +663,8 @@ class ContainerControls(Widget):
             self.post_message(self.ViewLogs(self.selected_container))
         elif event.button.id == "exec-btn" and self.selected_container:
             self.post_message(self.ExecCommand(self.selected_container))
+        elif event.button.id == "run-tool-btn" and self.selected_container:
+            self.post_message(self.RunTool(self.selected_container))
         elif event.button.id == "compose-up-btn":
             self.post_message(self.ComposeUp())
         elif event.button.id == "compose-down-btn":

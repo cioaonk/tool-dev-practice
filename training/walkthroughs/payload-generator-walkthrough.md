@@ -1,11 +1,37 @@
 # Payload Generator Walkthrough
 
+**Skill Level**: Intermediate [I]
+
 A comprehensive guide to payload generation, encoding, and delivery for CTF and CPTC competitions.
+
+> **New to security?** Review the [Glossary](../GLOSSARY.md) for definitions of technical terms. This walkthrough assumes you have completed Phase 1 (Network Reconnaissance).
+
+---
+
+## Prerequisites
+
+Before starting this walkthrough, ensure you:
+
+- [ ] Completed the Network Scanner Walkthrough
+- [ ] Understand what TCP connections are (client connects to server)
+- [ ] Know what a command-line shell is (bash, cmd, PowerShell)
+- [ ] Have access to a test environment (never test on unauthorized systems)
+
+**Required Knowledge**:
+- What an IP address and port are
+- Basic command-line usage
+- How to run Python scripts
+
+**Recommended Reading**: [Glossary](../GLOSSARY.md) entries for: Payload, Reverse Shell, Handler, Encoding, Obfuscation
+
+---
 
 ## Module Overview
 
 ### Purpose
 Master the creation and deployment of payloads for establishing remote access during authorized security assessments. This module covers shell generation, encoding techniques, and handler setup.
+
+> **What is a payload?** Simply put, a payload is code designed to run on a target system. In penetration testing, payloads typically give you remote access to a system - like being able to type commands on a computer that is not in front of you.
 
 ### Learning Objectives
 By completing this walkthrough, you will be able to:
@@ -18,11 +44,6 @@ By completing this walkthrough, you will be able to:
 ### Time Estimate
 - Reading: 60 minutes
 - Hands-on Practice: 2-3 hours
-
-### Prerequisites
-- Completed Network Scanner Walkthrough
-- Basic understanding of TCP networking
-- Familiarity with shell environments
 
 ---
 
@@ -37,6 +58,11 @@ By completing this walkthrough, you will be able to:
 | **Reverse Shell** | Target connects to attacker | Target behind NAT/firewall | Outbound connection |
 | **Bind Shell** | Attacker connects to target | Target has public IP | Listening port |
 | **Web Shell** | HTTP-based command execution | Web application compromise | File on disk |
+
+> **Plain English Explanation:**
+> - **Reverse Shell**: The target calls YOU. Like giving someone your phone number and having them call you back.
+> - **Bind Shell**: YOU call the target. The target opens a "phone line" and waits for your call.
+> - **Web Shell**: A webpage that runs commands. You interact through your browser.
 
 #### Reverse Shell Architecture
 
@@ -85,6 +111,14 @@ Understanding how payloads get detected helps you choose appropriate techniques:
 | **Network Monitoring** | Unusual outbound connections | Encrypted channels |
 | **Script Block Logging** | PowerShell commands | AMSI bypass, encoding |
 | **AMSI** | Malicious script content | AMSI bypass techniques |
+
+> **Term Definitions:**
+> - **AV (Antivirus)**: Software that looks for known malicious patterns (signatures)
+> - **AMSI (Antimalware Scan Interface)**: Windows feature that scans scripts before execution
+> - **Living-off-the-land**: Using built-in system tools instead of custom malware
+> - **Behavioral Analysis**: Detecting threats by what they DO, not what they look like
+
+> **OPSEC Note**: Modern security tools use multiple detection methods simultaneously. A payload that evades signatures may still be caught by behavioral analysis. Always assume your payloads will be logged somewhere.
 
 ### Operational Considerations
 
@@ -269,6 +303,10 @@ python3 payload_generator.py \
 | 1 | Basic string manipulation | Light AV evasion |
 | 2 | Additional encoding, variable obfuscation | Moderate security |
 | 3 | Advanced techniques | High-security environments |
+
+> **What is obfuscation?** Making code harder to understand or detect. Like writing a message in code - the meaning is the same, but it looks different. Security software may not recognize an obfuscated payload even if it would detect the original.
+
+> **Detection Awareness**: Basic obfuscation (levels 1-2) may evade signature-based antivirus but is unlikely to fool modern EDR solutions. Do not rely on obfuscation alone for environments with advanced security monitoring.
 
 ```bash
 # Level 2 obfuscation

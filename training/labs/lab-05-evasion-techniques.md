@@ -1,6 +1,12 @@
 # Lab 05: Evasion Techniques
 
+**Skill Level**: Advanced [A]
+
 A hands-on exercise in understanding and applying EDR evasion techniques.
+
+> **Warning**: This is an advanced lab. Complete all previous labs and the EDR Evasion Walkthrough before attempting.
+
+---
 
 ## Lab Information
 
@@ -10,6 +16,20 @@ A hands-on exercise in understanding and applying EDR evasion techniques.
 | Time Estimate | 90-120 minutes |
 | Prerequisites | Labs 01-04 completed, EDR Evasion Walkthrough |
 | Tools Required | edr-evasion-toolkit, shellcode-encoder, amsi-bypass |
+
+## Prerequisites Checklist
+
+**Stop here if you cannot check all boxes:**
+
+- [ ] Completed Labs 01 through 04
+- [ ] Read the [EDR Evasion Walkthrough](../walkthroughs/edr-evasion-walkthrough.md) thoroughly
+- [ ] Understand what EDR is and how user-mode hooks work
+- [ ] Know what a syscall is and why direct syscalls can evade hooks
+- [ ] Understand the concept of the Windows kernel vs. user mode
+
+**Key Terms for This Lab**: EDR, Hook, Syscall, AMSI, ETW, Kernel, User-mode (see [Glossary](../GLOSSARY.md))
+
+> **Important**: This lab focuses on conceptual understanding and artifact generation. Actual EDR evasion in production environments requires additional techniques not covered here. The techniques taught are for educational purposes and competition scenarios.
 
 ---
 

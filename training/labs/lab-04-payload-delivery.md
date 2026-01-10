@@ -1,6 +1,12 @@
 # Lab 04: Payload Delivery
 
+**Skill Level**: Intermediate to Advanced [I/A]
+
 A hands-on exercise in payload generation, encoding, and delivery techniques.
+
+> **Note**: Complete Labs 01-03 and the Payload Generator Walkthrough before attempting this lab.
+
+---
 
 ## Lab Information
 
@@ -10,6 +16,20 @@ A hands-on exercise in payload generation, encoding, and delivery techniques.
 | Time Estimate | 90-120 minutes |
 | Prerequisites | Labs 01-03 completed, Payload Generator Walkthrough |
 | Tools Required | payload-generator, shellcode-encoder, reverse-shell-handler |
+
+## Prerequisites Checklist
+
+Before starting, ensure you:
+
+- [ ] Completed Labs 01, 02, and 03
+- [ ] Read the [Payload Generator Walkthrough](../walkthroughs/payload-generator-walkthrough.md)
+- [ ] Understand what a reverse shell is (target connects back to attacker)
+- [ ] Know the difference between encoding and encryption
+- [ ] Have a safe, isolated lab environment (never test payloads on production systems)
+
+**Key Terms for This Lab**: Payload, Reverse Shell, Handler, Encoding, Obfuscation, Shellcode (see [Glossary](../GLOSSARY.md))
+
+> **Safety Warning**: Only generate and test payloads in authorized lab environments. Payloads may trigger antivirus alerts even in test environments.
 
 ---
 

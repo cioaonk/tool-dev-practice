@@ -139,6 +139,7 @@ rule Generic_Reverse_Shell_Windows {
         description = "Detects generic Windows reverse shell payloads"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -180,6 +181,7 @@ rule Generic_Reverse_Shell_Linux {
         description = "Detects generic Linux reverse shell payloads"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -219,6 +221,7 @@ rule Python_Reverse_Shell {
         description = "Detects Python reverse shell scripts"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -266,9 +269,10 @@ rule Python_Reverse_Shell {
 rule PowerShell_Download_Execute {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects PowerShell download and execute patterns"
+        description = "Detects PowerShell download and execute patterns (download cradles)"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "high"
         severity = "high"
@@ -315,9 +319,10 @@ rule PowerShell_Download_Execute {
 rule Webshell_Generic {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects generic webshell patterns"
+        description = "Detects generic webshell patterns (PHP, ASP, JSP)"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "critical"
@@ -372,9 +377,10 @@ rule Webshell_Generic {
 rule Dropper_Generic {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects generic dropper/loader patterns"
+        description = "Detects generic dropper/loader patterns including resource extraction and temp file creation"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
@@ -423,9 +429,10 @@ rule Dropper_Generic {
 rule Payload_XOR_Encoded {
     meta:
         author = "Detection Engineering Team"
-        description = "Detects XOR-encoded payload patterns"
+        description = "Detects XOR-encoded payload patterns with decoding loops"
         date = "2026-01-10"
         version = "1.0"
+        reference = "internal"
         tlp = "amber"
         confidence = "medium"
         severity = "high"
