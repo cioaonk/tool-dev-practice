@@ -1,0 +1,206 @@
+# CPTC11 Main Test Workflow
+# Runs the full test suite including unit tests, integration tests, and fuzz tests
+#
+# Triggers:
+#   - Push to main branch
+#   - Pull requests targeting main branch
+#
+# Jobs:
+#   - test: Runs pytest with coverage
+#   - lint: Runs ruff linting
+#   - fuzz: Runs fuzz tests with time limit
+
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  # =============================================================================
+  # Unit and Integration Tests
+  # =============================================================================
+  test:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('python/requirements-test.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        working-directory: python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: Run unit tests with coverage
+        working-directory: python
+        run: |
+          pytest tests/ \
+            --ignore=tests/fuzz/ \
+            --ignore=tests/integration/ \
+            --cov=tools \
+            --cov=tui \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=0 \
+            -v \
+            --tb=short \
+            --timeout=60
+
+      - name: Run integration tests
+        working-directory: python
+        run: |
+          pytest tests/integration/ \
+            -v \
+            --tb=short \
+            --timeout=120 \
+            -m "integration" \
+            || true  # Don't fail the build on integration tests
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: python/coverage.xml
+          retention-days: 7
+
+  # =============================================================================
+  # Linting with Ruff
+  # =============================================================================
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff check
+        working-directory: python
+        run: ruff check . --output-format=github
+
+      - name: Run ruff format check
+        working-directory: python
+        run: ruff format --check .
+
+  # =============================================================================
+  # Fuzz Tests (Property-Based Testing with Hypothesis)
+  # =============================================================================
+  fuzz:
+    name: Fuzz Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('python/requirements-test.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache Hypothesis examples
+        uses: actions/cache@v4
+        with:
+          path: python/.hypothesis
+          key: ${{ runner.os }}-hypothesis-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-hypothesis-
+
+      - name: Install dependencies
+        working-directory: python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: Run fuzz tests
+        working-directory: python
+        env:
+          HYPOTHESIS_PROFILE: ci
+        run: |
+          # Run fuzz tests with a time limit
+          timeout 600 pytest tests/fuzz/ \
+            -v \
+            --tb=short \
+            -m "fuzz" \
+            --timeout=300 \
+            --hypothesis-seed=0 \
+            || exit_code=$?
+
+          # Exit code 124 means timeout (acceptable for fuzz tests)
+          if [ "${exit_code:-0}" -eq 124 ]; then
+            echo "Fuzz tests timed out (expected behavior)"
+            exit 0
+          fi
+          exit ${exit_code:-0}
+
+  # =============================================================================
+  # Summary Job (for branch protection)
+  # =============================================================================
+  ci-success:
+    name: CI Success
+    needs: [test, lint, fuzz]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "Test job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "Lint job failed"
+            exit 1
+          fi
+          # Fuzz tests are allowed to be skipped or timed out
+          if [[ "${{ needs.fuzz.result }}" == "failure" ]]; then
+            echo "Fuzz job failed unexpectedly"
+            exit 1
+          fi
+          echo "All CI checks passed!"

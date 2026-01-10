@@ -4,11 +4,62 @@ Pytest configuration and shared fixtures for CPTC11 test suite.
 This module contains fixtures that can be used across all test modules.
 """
 
-import pytest
-import tempfile
 import os
 import shutil
+import tempfile
 from pathlib import Path
+
+import pytest
+
+
+# ============================================================================
+# HYPOTHESIS CONFIGURATION FOR CI/CD
+# ============================================================================
+
+def pytest_configure(config):
+    """Configure Hypothesis profiles for different environments."""
+    try:
+        from hypothesis import settings, Verbosity, Phase
+
+        # CI Profile: Reduced examples, longer deadlines for slower CI runners
+        settings.register_profile(
+            "ci",
+            max_examples=50,
+            deadline=5000,  # 5 second deadline (CI can be slow)
+            suppress_health_check=[],
+            verbosity=Verbosity.normal,
+            phases=[Phase.explicit, Phase.reuse, Phase.generate, Phase.shrink],
+        )
+
+        # Fast Profile: Minimal examples for quick local testing
+        settings.register_profile(
+            "fast",
+            max_examples=10,
+            deadline=1000,
+        )
+
+        # Dev Profile: Default for local development
+        settings.register_profile(
+            "dev",
+            max_examples=100,
+            deadline=2000,
+        )
+
+        # Thorough Profile: Extensive testing for release validation
+        settings.register_profile(
+            "thorough",
+            max_examples=500,
+            deadline=10000,
+        )
+
+        # Load profile from environment variable, default to "dev"
+        profile_name = os.environ.get("HYPOTHESIS_PROFILE", "dev")
+        settings.load_profile(profile_name)
+        print(f"Hypothesis profile: {profile_name}")
+
+    except ImportError:
+        # Hypothesis not installed, skip configuration
+        pass
 
 
 # ============================================================================

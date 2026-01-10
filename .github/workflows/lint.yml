@@ -1,0 +1,117 @@
+# CPTC11 Linting Workflow
+# Dedicated linting workflow for faster feedback on code style issues
+#
+# This workflow runs independently of the main test suite for quick feedback
+# on code formatting and style issues.
+#
+# Triggers:
+#   - Push to main branch
+#   - Pull requests targeting main branch
+
+name: Lint
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'python/**/*.py'
+      - 'python/pyproject.toml'
+      - '.github/workflows/lint.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'python/**/*.py'
+      - 'python/pyproject.toml'
+      - '.github/workflows/lint.yml'
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: Ruff Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install ruff
+        run: pip install ruff>=0.1.0
+
+      # =============================================================================
+      # Ruff Check - Static Analysis
+      # =============================================================================
+      - name: Run ruff check
+        working-directory: python
+        run: |
+          echo "Running ruff check..."
+          ruff check . --output-format=github
+
+      # =============================================================================
+      # Ruff Format Check - Code Formatting
+      # =============================================================================
+      - name: Run ruff format check
+        working-directory: python
+        run: |
+          echo "Checking code formatting with ruff format..."
+          ruff format --check --diff .
+
+      # =============================================================================
+      # Report Summary
+      # =============================================================================
+      - name: Lint Summary
+        if: always()
+        run: |
+          echo "## Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Ruff check: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Ruff format: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To fix formatting issues locally, run:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "cd python && ruff format ." >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To fix linting issues locally, run:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "cd python && ruff check --fix ." >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Security Linting (Optional - runs ruff's security rules)
+  # =============================================================================
+  security-lint:
+    name: Security Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install ruff
+        run: pip install ruff>=0.1.0
+
+      - name: Run security-focused lint (bandit rules via ruff)
+        working-directory: python
+        continue-on-error: true  # Security warnings don't fail the build
+        run: |
+          echo "Running security-focused linting (flake8-bandit rules)..."
+          ruff check . --select=S --output-format=github || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Security Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "Security linting completed. Review any warnings above." >> $GITHUB_STEP_SUMMARY

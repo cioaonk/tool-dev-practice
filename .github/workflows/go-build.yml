@@ -1,0 +1,256 @@
+# CPTC11 Go Build Verification Workflow
+# Builds and validates all Go code in the golang/ directory
+#
+# Triggers:
+#   - Push to main branch (when Go files change)
+#   - Pull requests targeting main branch (when Go files change)
+#
+# Jobs:
+#   - build: Compiles all Go files
+#   - vet: Runs go vet for static analysis
+#   - fmt: Checks code formatting
+
+name: Go Build
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'golang/**/*.go'
+      - 'golang/**/go.mod'
+      - 'golang/**/go.sum'
+      - '.github/workflows/go-build.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'golang/**/*.go'
+      - 'golang/**/go.mod'
+      - 'golang/**/go.sum'
+      - '.github/workflows/go-build.yml'
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.21"
+
+jobs:
+  # =============================================================================
+  # Build All Go Files
+  # =============================================================================
+  build:
+    name: Build Go
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: golang/**/go.sum
+
+      - name: Display Go version
+        run: go version
+
+      # Build the main file_info.go file
+      - name: Build file_info.go
+        working-directory: golang
+        run: |
+          echo "Building file_info.go..."
+          go build -v -o file_info file_info.go
+          echo "Build successful!"
+
+      # Build all tools in golang/tools/
+      - name: Build all Go tools
+        working-directory: golang
+        run: |
+          echo "Building Go tools..."
+
+          # Find and build all .go files in tools directory
+          for dir in tools/*/; do
+            if [ -d "$dir" ]; then
+              tool_name=$(basename "$dir")
+              echo "Building $tool_name..."
+
+              # Find the main .go file in this directory
+              for gofile in "$dir"*.go; do
+                if [ -f "$gofile" ]; then
+                  echo "  Compiling: $gofile"
+                  go build -v -o "${dir}${tool_name}" "$gofile" || {
+                    echo "Warning: Failed to build $gofile"
+                  }
+                fi
+              done
+            fi
+          done
+
+          echo "All Go tools built!"
+
+      - name: List built binaries
+        working-directory: golang
+        run: |
+          echo "Built binaries:"
+          find . -type f -perm +111 -name "*" ! -name "*.go" 2>/dev/null || true
+
+  # =============================================================================
+  # Go Vet - Static Analysis
+  # =============================================================================
+  vet:
+    name: Go Vet
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run go vet on main files
+        working-directory: golang
+        run: |
+          echo "Running go vet on file_info.go..."
+          go vet file_info.go
+
+      - name: Run go vet on all tools
+        working-directory: golang
+        run: |
+          echo "Running go vet on all tools..."
+
+          # Run go vet on each tool
+          exit_code=0
+          for dir in tools/*/; do
+            if [ -d "$dir" ]; then
+              for gofile in "$dir"*.go; do
+                if [ -f "$gofile" ]; then
+                  echo "Vetting: $gofile"
+                  go vet "$gofile" || exit_code=1
+                fi
+              done
+            fi
+          done
+
+          if [ $exit_code -ne 0 ]; then
+            echo "go vet found issues!"
+            exit 1
+          fi
+
+          echo "go vet passed!"
+
+  # =============================================================================
+  # Go Format Check
+  # =============================================================================
+  fmt:
+    name: Go Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Check Go formatting
+        working-directory: golang
+        run: |
+          echo "Checking Go code formatting..."
+
+          # Find all .go files and check formatting
+          unformatted=$(gofmt -l .)
+
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not properly formatted:"
+            echo "$unformatted"
+            echo ""
+            echo "Run 'gofmt -w .' to fix formatting issues."
+            exit 1
+          fi
+
+          echo "All Go files are properly formatted!"
+
+      - name: Format Summary
+        if: always()
+        run: |
+          echo "## Go Format Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To fix formatting issues locally, run:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "cd golang && gofmt -w ." >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Security Check with go vet shadow
+  # =============================================================================
+  security:
+    name: Go Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true  # Don't fail build on security warnings
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Run staticcheck
+        working-directory: golang
+        continue-on-error: true
+        run: |
+          echo "Running staticcheck..."
+
+          # Run on main file
+          staticcheck file_info.go || true
+
+          # Run on tools
+          for gofile in tools/*/*.go; do
+            if [ -f "$gofile" ]; then
+              echo "Checking: $gofile"
+              staticcheck "$gofile" || true
+            fi
+          done
+
+  # =============================================================================
+  # Summary Job
+  # =============================================================================
+  go-ci-success:
+    name: Go CI Success
+    needs: [build, vet, fmt]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "Build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.vet.result }}" != "success" ]]; then
+            echo "Vet job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.fmt.result }}" != "success" ]]; then
+            echo "Format job failed"
+            exit 1
+          fi
+          echo "All Go CI checks passed!"

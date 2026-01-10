@@ -143,3 +143,29 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 show_missing = true
+
+# =============================================================================
+# Hypothesis Configuration for Property-Based Testing
+# =============================================================================
+
+[tool.hypothesis]
+# Default profile settings
+default = { max_examples = 100, deadline = 1000 }
+
+[tool.pytest.ini_options.hypothesis]
+# CI profile with reduced examples for faster runs
+# Use with: HYPOTHESIS_PROFILE=ci pytest
+# Note: Hypothesis profiles are typically set via environment variable
+
+# =============================================================================
+# CI/CD Specific Settings
+# =============================================================================
+
+# Additional pytest options for CI environments
+# These can be overridden via command line
+
+# Note: The following markers are defined above and used in CI:
+# - slow: marks tests as slow (deselect with '-m "not slow"')
+# - integration: marks tests as integration tests
+# - fuzz: marks tests as fuzz tests
+# - security: marks tests as security-focused
