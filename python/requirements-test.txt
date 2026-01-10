@@ -1,10 +1,14 @@
 # CPTC11 Test Requirements
 # Install with: pip install -r requirements-test.txt
 
-# Core testing framework
+# =============================================================================
+# Core Testing Framework
+# =============================================================================
+
+# Primary test runner
 pytest>=7.0.0
 
-# Test coverage
+# Test coverage measurement
 pytest-cov>=4.0.0
 
 # Mock support (included in pytest, but explicit for clarity)
@@ -22,5 +26,62 @@ pytest-html>=3.0.0
 # Benchmark tests (optional)
 pytest-benchmark>=4.0.0
 
-# Property-based testing (optional)
+# =============================================================================
+# Property-Based Testing / Fuzzing
+# =============================================================================
+
+# Hypothesis - Property-based testing framework
+# Used for fuzz testing input validation functions
 hypothesis>=6.0.0
+
+# Hypothesis extensions for extra strategies
+hypothesis[cli]>=6.0.0
+
+# =============================================================================
+# Linting and Code Quality
+# =============================================================================
+
+# Ruff - Fast Python linter and formatter
+# Replaces flake8, isort, pyupgrade, and more
+ruff>=0.1.0
+
+# Optional: pylint for additional static analysis
+# Uncomment if more thorough analysis is needed
+# pylint>=3.0.0
+
+# =============================================================================
+# Type Checking (Optional)
+# =============================================================================
+
+# mypy - Static type checker
+# Uncomment if type checking is desired
+# mypy>=1.0.0
+
+# =============================================================================
+# Security Testing (Optional)
+# =============================================================================
+
+# Bandit - Security-focused static analyzer
+# Note: Ruff includes flake8-bandit rules, but standalone bandit
+# provides more detailed reports
+# bandit>=1.7.0
+
+# Safety - Check dependencies for known vulnerabilities
+# safety>=2.0.0
+
+# =============================================================================
+# Documentation Testing (Optional)
+# =============================================================================
+
+# Test code examples in docstrings
+# pytest-doctest-modules>=0.1.0
+
+# =============================================================================
+# Development Utilities
+# =============================================================================
+
+# For interactive debugging
+# ipdb>=0.13.0
+
+# For better assertion introspection
+pytest-sugar>=0.9.0

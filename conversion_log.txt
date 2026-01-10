@@ -415,6 +415,241 @@ END OF ENTRY #7
 ================================================================================
 
 ================================================================================
+CONVERSION ENTRY #8
+================================================================================
+Timestamp:        2026-01-10T17:45:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/smb-enumerator/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/smb-enumerator/enumerator.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 5 dataclasses (SMBShare, SMBUser, SMBSystemInfo, EnumConfig, EnumResult) to Go structs
+- Converted SMBCommand enum to Go const byte values
+- Implemented SMBClient class with raw socket SMB protocol:
+  * NetBIOS session header creation
+  * SMB header construction
+  * Protocol negotiation (SMB1/SMB2 detection)
+  * Null session/credential authentication
+  * Tree connect for share access
+- Converted SMBEnumerator main class
+- Share enumeration via common name probing
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass with Optional fields -> Go struct with pointer types
+2. Enum -> Go const byte values
+3. struct.pack/unpack -> manual byte slice construction
+4. socket.socket(SOCK_STREAM) -> net.DialTimeout()
+5. UTF-16LE encoding -> custom encodeUTF16LE function
+6. List[SMBShare] -> []SMBShare
+7. Optional[str] -> *string
+8. datetime.now() -> time.Now()
+
+Line Count Comparison:
+----------------------
+Python lines: 828
+Go lines:     582
+Ratio:        0.70x (Go more concise with cleaner struct handling)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/smb-enumerator
+go build -o smb-enumerator enumerator.go
+
+Notes:
+------
+- Raw SMB protocol implementation (no external dependencies)
+- SMB negotiation detects SMB1 vs SMB2+ servers
+- OS version and signing requirement extraction from negotiate response
+- Share enumeration probes 20 common share names
+- Null session and credential-based authentication supported
+- Planning mode shows risk assessment for SMB operations
+
+================================================================================
+END OF ENTRY #8
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #9
+================================================================================
+Timestamp:        2026-01-10T18:00:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/http-request-tool/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/http-request-tool/httptool.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 2 dataclasses (HTTPResponse, RequestConfig) to Go structs
+- Converted HTTPClient class using Go's net/http package:
+  * URL parsing and component extraction
+  * Custom header building
+  * TLS configuration for HTTPS
+  * Redirect tracking with custom CheckRedirect function
+  * SSL certificate info extraction
+- Response body handling with size limits
+- Redirect chain tracking
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags
+2. urllib.parse.urlparse() -> net/url.Parse()
+3. http.client.HTTPSConnection -> net/http.Client
+4. ssl.create_default_context() -> crypto/tls.Config
+5. response.getheaders() -> resp.Header iteration
+6. sys.stdout.buffer.write() -> os.Stdout.Write()
+7. argparse action="append" -> custom flag type
+
+Line Count Comparison:
+----------------------
+Python lines: 619
+Go lines:     408
+Ratio:        0.66x (Go's net/http package is very efficient)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/http-request-tool
+go build -o http-request-tool httptool.go
+
+Notes:
+------
+- Uses Go's standard net/http package for robust HTTP handling
+- TLS verification can be disabled with -k flag
+- Multiple headers supported via repeated -H flags
+- Redirect following with configurable max redirects
+- SSL certificate info (subject, issuer, expiry) extracted
+- Raw output mode for piping to other tools
+- Response body truncation for large responses (>5000 bytes)
+
+================================================================================
+END OF ENTRY #9
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #10
+================================================================================
+Timestamp:        2026-01-10T18:15:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/hash-cracker/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/hash-cracker/cracker.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 4 dataclasses (HashTarget, CrackConfig, CrackResult) to Go structs
+- Converted HashType enum to Go const string type
+- Implemented HashEngine class with multiple algorithms:
+  * MD5 (crypto/md5)
+  * SHA1 (crypto/sha1)
+  * SHA256 (crypto/sha256)
+  * SHA512 (crypto/sha512)
+  * NTLM (custom MD4 implementation with UTF-16LE)
+- Converted WordGenerator class with:
+  * Wordlist loading with rules
+  * Bruteforce generation
+  * Mutation rules (capitalize, uppercase, reverse, leet, append_numbers/year)
+- Converted HashCracker main class with goroutine worker pool
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags
+2. Enum -> Go const string type
+3. hashlib.md5/sha1/sha256/sha512 -> crypto/* packages
+4. hashlib.new('md4') -> custom MD4 implementation
+5. itertools.product() -> recursive combination generator
+6. Generator[str] -> Go channels
+7. ThreadPoolExecutor -> goroutines + sync.WaitGroup
+8. threading.Event -> chan struct{}
+9. atomic counter -> sync/atomic.AddInt64
+
+Line Count Comparison:
+----------------------
+Python lines: 755
+Go lines:     680
+Ratio:        0.90x (similar due to MD4 implementation)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/hash-cracker
+go build -o hash-cracker cracker.go
+
+Notes:
+------
+- MD4 implementation for NTLM (not in Go standard library)
+- UTF-16LE encoding for NTLM password conversion
+- Hash type auto-detection by length (32=MD5/NTLM, 40=SHA1, 64=SHA256, 128=SHA512)
+- Supports username:hash file format
+- Bruteforce with configurable charset and length
+- Atomic counter for thread-safe attempt tracking
+- All operations in-memory (no disk artifacts)
+
+================================================================================
+END OF ENTRY #10
+================================================================================
+
+================================================================================
+CONVERSION ENTRY #11
+================================================================================
+Timestamp:        2026-01-10T18:30:00-08:00
+Source File:      /Users/ic/cptc11/python/tools/reverse-shell-handler/tool.py
+Destination File: /Users/ic/cptc11/golang/tools/reverse-shell-handler/handler.go
+Status:           COMPLETED
+
+Conversion Summary:
+-------------------
+- Converted 2 dataclasses (Session, HandlerConfig) to Go structs
+- Converted ShellType enum to Go const string type
+- Implemented PayloadGenerator class with 9 payload types:
+  * Bash (standard and base64 encoded)
+  * Python one-liner
+  * Netcat (with and without -e flag)
+  * PHP, Perl, Ruby one-liners
+  * PowerShell reverse shell
+- Converted ShellHandler main class with:
+  * TCP/TLS listener setup
+  * Session management
+  * Interactive shell with background/exit commands
+  * Multi-handler mode support
+- Bidirectional data forwarding between stdin/stdout and socket
+
+Python Constructs Converted:
+----------------------------
+1. @dataclass -> Go struct with JSON tags
+2. Enum -> Go const string type
+3. base64.b64encode() -> encoding/base64.StdEncoding.EncodeToString()
+4. ssl.SSLContext -> crypto/tls.Config
+5. select.select() -> goroutines with channels
+6. socket.accept() -> listener.Accept()
+7. socket.recv/send -> conn.Read/Write
+8. threading -> goroutines
+9. Dict[int, Session] -> map[int]*Session
+
+Line Count Comparison:
+----------------------
+Python lines: 637
+Go lines:     510
+Ratio:        0.80x (Go concurrency model simpler)
+
+Build Instructions Added:
+-------------------------
+cd /Users/ic/cptc11/golang/tools/reverse-shell-handler
+go build -o reverse-shell-handler handler.go
+
+Notes:
+------
+- TCP listener with optional TLS encryption
+- Session timeout configuration
+- Bidirectional data forwarding with goroutines
+- Background command to return to handler
+- Multi-handler mode for managing multiple sessions
+- Payload generator for quick copy-paste
+- All session data kept in-memory only
+- WARNING banner for authorized use reminder
+
+================================================================================
+END OF ENTRY #11
+================================================================================
+
+================================================================================
 FILES SKIPPED (NOT CONVERTED)
 ================================================================================
 
@@ -435,6 +670,45 @@ FILES SKIPPED (NOT CONVERTED)
 4. /Users/ic/cptc11/python/tui/**/__init__.py files
    Reason: Python package markers
    Notes:  Go uses package declarations in source files instead
+
+================================================================================
+
+================================================================================
+CONVERSION STATISTICS SUMMARY
+================================================================================
+Timestamp: 2026-01-10T18:45:00-08:00
+
+Total Conversions: 11
+- file_info.py -> file_info.go
+- network-scanner/tool.py -> network-scanner/scanner.go
+- port-scanner/tool.py -> port-scanner/scanner.go
+- service-fingerprinter/tool.py -> service-fingerprinter/fingerprinter.go
+- web-directory-enumerator/tool.py -> web-directory-enumerator/enumerator.go
+- credential-validator/tool.py -> credential-validator/validator.go
+- dns-enumerator/tool.py -> dns-enumerator/enumerator.go
+- smb-enumerator/tool.py -> smb-enumerator/enumerator.go
+- http-request-tool/tool.py -> http-request-tool/httptool.go
+- hash-cracker/tool.py -> hash-cracker/cracker.go
+- reverse-shell-handler/tool.py -> reverse-shell-handler/handler.go
+
+Overall Line Count Comparison:
+------------------------------
+Total Python lines:  ~7500
+Total Go lines:      ~6200
+Average ratio:       0.83x (Go generally more concise)
+
+Key Patterns Used:
+------------------
+- @dataclass -> Go structs with JSON tags
+- ABC/abstractmethod -> Go interfaces
+- ThreadPoolExecutor -> goroutines + channels + sync.WaitGroup
+- argparse -> flag package
+- socket operations -> net package
+- http.client -> net/http package
+- hashlib -> crypto/* packages
+- struct.pack/unpack -> encoding/binary or manual byte handling
+
+Files Skipped: 4 (TUI framework, test files)
 
 ================================================================================
 

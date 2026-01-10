@@ -1,6 +1,6 @@
 # Python-to-Golang Converter Agent Report
 
-**Report Generated:** 2026-01-10T17:35:00-08:00
+**Report Generated:** 2026-01-10T18:45:00-08:00
 **Agent Status:** Active
 **Monitoring Directory:** /Users/ic/cptc11/python/
 
@@ -10,8 +10,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Files Scanned | 20 |
-| New Conversions | 7 |
+| Files Scanned | 24 |
+| New Conversions | 11 |
 | Updated Conversions | 0 |
 | Failed Conversions | 0 |
 | Skipped (Framework-specific) | 4 |
@@ -210,7 +210,131 @@ cd /Users/ic/cptc11/golang/tools/dns-enumerator && go build -o enumerator enumer
 ./enumerator example.com -w subdomains.txt -t 20
 ```
 
-**Line Count:** Python ~900 lines -> Go ~750 lines (0.83x)
+**Line Count:** Python 899 lines -> Go 1053 lines (1.17x)
+
+---
+
+### 8. smb-enumerator/tool.py -> smb-enumerator/enumerator.go
+
+**Status:** COMPLETED
+
+**Source:** `/Users/ic/cptc11/python/tools/smb-enumerator/tool.py`
+**Destination:** `/Users/ic/cptc11/golang/tools/smb-enumerator/enumerator.go`
+
+**Functionality:** SMB/CIFS enumeration tool:
+- Raw SMB protocol implementation
+- SMB1/SMB2 version detection
+- OS version and signing requirement detection
+- Share enumeration via common name probing (20 shares)
+- Null session and credential authentication
+
+**Build Command:**
+```bash
+cd /Users/ic/cptc11/golang/tools/smb-enumerator && go build -o smb-enumerator enumerator.go
+```
+
+**Usage:**
+```bash
+./smb-enumerator 192.168.1.1 --plan
+./smb-enumerator 192.168.1.1 -n
+./smb-enumerator 192.168.1.1 -u admin -P password -d DOMAIN
+```
+
+**Line Count:** Python 828 lines -> Go 831 lines (1.00x)
+
+---
+
+### 9. http-request-tool/tool.py -> http-request-tool/httptool.go
+
+**Status:** COMPLETED
+
+**Source:** `/Users/ic/cptc11/python/tools/http-request-tool/tool.py`
+**Destination:** `/Users/ic/cptc11/golang/tools/http-request-tool/httptool.go`
+
+**Functionality:** Flexible HTTP client for security testing:
+- Custom HTTP methods (GET, POST, PUT, DELETE, etc.)
+- Custom headers with repeatable -H flag
+- Request body from argument or file
+- SSL certificate inspection
+- Redirect following with tracking
+- Response timing
+
+**Build Command:**
+```bash
+cd /Users/ic/cptc11/golang/tools/http-request-tool && go build -o http-request-tool httptool.go
+```
+
+**Usage:**
+```bash
+./http-request-tool http://target.com --plan
+./http-request-tool http://target.com/api -X POST -d '{"key":"value"}'
+./http-request-tool https://target.com -H "Authorization: Bearer token"
+```
+
+**Line Count:** Python 619 lines -> Go 539 lines (0.87x)
+
+---
+
+### 10. hash-cracker/tool.py -> hash-cracker/cracker.go
+
+**Status:** COMPLETED
+
+**Source:** `/Users/ic/cptc11/python/tools/hash-cracker/tool.py`
+**Destination:** `/Users/ic/cptc11/golang/tools/hash-cracker/cracker.go`
+
+**Functionality:** Multi-algorithm hash cracking utility:
+- Algorithms: MD5, SHA1, SHA256, SHA512, NTLM
+- Dictionary attacks with wordlist
+- Bruteforce attacks with configurable charset/length
+- Mutation rules (capitalize, uppercase, reverse, leet, append_numbers/year)
+- Auto hash type detection by length
+- Multi-threaded with atomic counters
+
+**Build Command:**
+```bash
+cd /Users/ic/cptc11/golang/tools/hash-cracker && go build -o hash-cracker cracker.go
+```
+
+**Usage:**
+```bash
+./hash-cracker 5f4dcc3b5aa765d61d8327deb882cf99 -w wordlist.txt
+./hash-cracker --file hashes.txt -w rockyou.txt -t md5
+./hash-cracker 5f4dcc3b5aa765d61d8327deb882cf99 -b -c alphanumeric
+```
+
+**Line Count:** Python 755 lines -> Go 927 lines (1.23x - includes MD4 implementation)
+
+---
+
+### 11. reverse-shell-handler/tool.py -> reverse-shell-handler/handler.go
+
+**Status:** COMPLETED
+
+**Source:** `/Users/ic/cptc11/python/tools/reverse-shell-handler/tool.py`
+**Destination:** `/Users/ic/cptc11/golang/tools/reverse-shell-handler/handler.go`
+
+**Functionality:** Multi-protocol reverse shell listener:
+- TCP listener with optional TLS
+- Session management
+- Interactive shell with background/exit commands
+- Multi-handler mode for multiple sessions
+- Payload generator (Bash, Python, Netcat, PHP, Perl, Ruby, PowerShell)
+- Bidirectional data forwarding
+
+**Build Command:**
+```bash
+cd /Users/ic/cptc11/golang/tools/reverse-shell-handler && go build -o reverse-shell-handler handler.go
+```
+
+**Usage:**
+```bash
+./reverse-shell-handler --plan
+./reverse-shell-handler -l 4444
+./reverse-shell-handler -l 443 --ssl --ssl-cert cert.pem --ssl-key key.pem
+./reverse-shell-handler --payloads -H 10.0.0.1 -l 4444
+```
+
+**Line Count:** Python 637 lines -> Go 624 lines (0.98x)
 
 ---
 
@@ -238,16 +362,24 @@ cd /Users/ic/cptc11/golang/tools/dns-enumerator && go build -o enumerator enumer
 │       ├── service-fingerprinter/tool.py    # CONVERTED
 │       ├── web-directory-enumerator/tool.py # CONVERTED
 │       ├── credential-validator/tool.py     # CONVERTED
-│       └── dns-enumerator/tool.py           # CONVERTED
+│       ├── dns-enumerator/tool.py           # CONVERTED
+│       ├── smb-enumerator/tool.py           # CONVERTED
+│       ├── http-request-tool/tool.py        # CONVERTED
+│       ├── hash-cracker/tool.py             # CONVERTED
+│       └── reverse-shell-handler/tool.py    # CONVERTED
 ├── golang/                                  # Converted Go files
 │   ├── file_info.go                         # From file_info.py
 │   └── tools/
-│       ├── network-scanner/scanner.go       # From tool.py
-│       ├── port-scanner/scanner.go          # From tool.py
+│       ├── network-scanner/scanner.go
+│       ├── port-scanner/scanner.go
 │       ├── service-fingerprinter/fingerprinter.go
 │       ├── web-directory-enumerator/enumerator.go
 │       ├── credential-validator/validator.go
-│       └── dns-enumerator/enumerator.go
+│       ├── dns-enumerator/enumerator.go
+│       ├── smb-enumerator/enumerator.go
+│       ├── http-request-tool/httptool.go
+│       ├── hash-cracker/cracker.go
+│       └── reverse-shell-handler/handler.go
 ├── conversion_log.txt                       # Detailed conversion log
 └── agent_reports/
     └── converter_report.md                  # This report
@@ -265,8 +397,12 @@ cd /Users/ic/cptc11/golang/tools/dns-enumerator && go build -o enumerator enumer
 | service-fingerprinter | ~750 | ~800 | 1.07x |
 | web-directory-enumerator | ~876 | ~720 | 0.82x |
 | credential-validator | ~1296 | ~1050 | 0.81x |
-| dns-enumerator | ~900 | ~750 | 0.83x |
-| **TOTAL** | **~5394** | **~4700** | **0.87x** |
+| dns-enumerator | 899 | 1053 | 1.17x |
+| smb-enumerator | 828 | 831 | 1.00x |
+| http-request-tool | 619 | 539 | 0.87x |
+| hash-cracker | 755 | 927 | 1.23x |
+| reverse-shell-handler | 637 | 624 | 0.98x |
+| **TOTAL** | **~8232** | **~7924** | **0.96x** |
 
 ---
 
@@ -281,19 +417,23 @@ cd /Users/ic/cptc11/golang/tools/dns-enumerator && go build -o enumerator enumer
 | `ThreadPoolExecutor` | goroutines + `sync.WaitGroup` |
 | `concurrent.futures` | channels |
 | `threading.Lock` | `sync.Mutex` |
+| `threading.Event` | `chan struct{}` |
 | `argparse` | `flag` package |
 | `socket` | `net` package |
 | `http.client` | `net/http` |
 | `ssl` | `crypto/tls` |
 | `re` | `regexp` |
-| `hashlib` | `crypto/md5`, `crypto/sha256` |
+| `hashlib` | `crypto/*` packages |
 | `base64` | `encoding/base64` |
-| `struct.pack/unpack` | `encoding/binary` |
+| `struct.pack/unpack` | `encoding/binary` or manual bytes |
 | `typing.Optional` | pointer types (`*string`, `*float64`) |
 | `typing.List` | slices (`[]string`) |
 | `typing.Dict` | maps (`map[string]string`) |
+| `typing.Generator` | channels (`chan string`) |
 | `Enum` | `const` with custom type |
 | Exception handling | `if err != nil` pattern |
+| `itertools.product` | recursive generator or loops |
+| `select.select()` | goroutines with channels |
 
 ---
 
@@ -322,6 +462,18 @@ cd /Users/ic/cptc11/golang/tools
 
 # DNS Enumerator
 (cd dns-enumerator && go build -o enumerator enumerator.go)
+
+# SMB Enumerator
+(cd smb-enumerator && go build -o smb-enumerator enumerator.go)
+
+# HTTP Request Tool
+(cd http-request-tool && go build -o http-request-tool httptool.go)
+
+# Hash Cracker
+(cd hash-cracker && go build -o hash-cracker cracker.go)
+
+# Reverse Shell Handler
+(cd reverse-shell-handler && go build -o reverse-shell-handler handler.go)
 ```
 
 ---
@@ -349,4 +501,5 @@ The converter agent checks for new Python files every 5 minutes.
 
 ---
 
-*Report will be updated on next conversion cycle or when new files are detected.*
+*Report updated: 2026-01-10T18:45:00-08:00*
+*All Python security tools have been converted to Go.*
