@@ -312,3 +312,340 @@ def create_test_file(directory, filename, content=b'test content'):
     else:
         file_path.write_bytes(content)
     return file_path
+
+
+# ============================================================================
+# EDGE CASE TEST FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def null_bytes_file(temp_dir):
+    """
+    Create a file containing only null bytes.
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the null bytes file.
+    """
+    file_path = temp_dir / "null_bytes.bin"
+    file_path.write_bytes(b"\x00" * 100)
+    yield file_path
+
+
+@pytest.fixture
+def all_byte_values_file(temp_dir):
+    """
+    Create a file containing all possible byte values (0-255).
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the file with all byte values.
+    """
+    file_path = temp_dir / "all_bytes.bin"
+    file_path.write_bytes(bytes(range(256)))
+    yield file_path
+
+
+@pytest.fixture
+def symlink_file(temp_dir, temp_file):
+    """
+    Create a symbolic link to a file.
+
+    Args:
+        temp_dir: The temporary directory fixture.
+        temp_file: The target file fixture.
+
+    Yields:
+        Path: Path to the symbolic link, or None if symlinks not supported.
+    """
+    link_path = temp_dir / "symlink.txt"
+    try:
+        link_path.symlink_to(temp_file)
+        yield link_path
+    except (OSError, NotImplementedError):
+        yield None
+
+
+@pytest.fixture
+def broken_symlink(temp_dir):
+    """
+    Create a broken symbolic link (pointing to nonexistent target).
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the broken symbolic link, or None if symlinks not supported.
+    """
+    link_path = temp_dir / "broken_link.txt"
+    target_path = temp_dir / "nonexistent_target.txt"
+    try:
+        link_path.symlink_to(target_path)
+        yield link_path
+    except (OSError, NotImplementedError):
+        yield None
+
+
+@pytest.fixture
+def readonly_file(temp_dir):
+    """
+    Create a read-only file.
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the read-only file.
+    """
+    file_path = temp_dir / "readonly.txt"
+    file_path.write_text("read only content")
+    file_path.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    yield file_path
+    # Restore permissions for cleanup
+    file_path.chmod(stat.S_IRWXU)
+
+
+@pytest.fixture
+def no_permission_file(temp_dir):
+    """
+    Create a file with no permissions.
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the no-permission file.
+    """
+    if os.name == 'nt':
+        pytest.skip("Windows handles permissions differently")
+
+    file_path = temp_dir / "no_permission.txt"
+    file_path.write_text("no permissions")
+    file_path.chmod(0o000)
+    yield file_path
+    # Restore permissions for cleanup
+    file_path.chmod(stat.S_IRWXU)
+
+
+@pytest.fixture
+def file_with_null_in_content(temp_dir):
+    """
+    Create a file with null bytes embedded in text content.
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the file with embedded nulls.
+    """
+    file_path = temp_dir / "embedded_nulls.bin"
+    file_path.write_bytes(b"Hello\x00World\x00Test")
+    yield file_path
+
+
+@pytest.fixture
+def high_entropy_file(temp_dir):
+    """
+    Create a file with high-entropy (pseudo-random) content.
+
+    Args:
+        temp_dir: The temporary directory fixture.
+
+    Yields:
+        Path: Path to the high-entropy file.
+    """
+    import hashlib
+    file_path = temp_dir / "high_entropy.bin"
+    # Generate pseudo-random content deterministically
+    content = hashlib.sha256(b"seed").digest() * 100
+    file_path.write_bytes(content)
+    yield file_path
+
+
+# ============================================================================
+# NETWORK EDGE CASE FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def localhost_ipv4():
+    """Return localhost IPv4 address."""
+    return "127.0.0.1"
+
+
+@pytest.fixture
+def localhost_ipv6():
+    """Return localhost IPv6 address."""
+    return "::1"
+
+
+@pytest.fixture
+def broadcast_ipv4():
+    """Return broadcast IPv4 address."""
+    return "255.255.255.255"
+
+
+@pytest.fixture
+def unspecified_ipv4():
+    """Return unspecified IPv4 address."""
+    return "0.0.0.0"
+
+
+@pytest.fixture
+def sample_cidr_ranges():
+    """Return sample CIDR ranges for testing."""
+    return [
+        "10.0.0.0/8",       # Class A private
+        "172.16.0.0/12",    # Class B private
+        "192.168.0.0/16",   # Class C private
+        "192.168.1.0/24",   # Common LAN
+        "192.168.1.0/30",   # Point-to-point
+        "192.168.1.0/32",   # Single host
+    ]
+
+
+@pytest.fixture
+def invalid_ip_addresses():
+    """Return sample invalid IP addresses for testing."""
+    return [
+        "256.0.0.0",
+        "-1.0.0.0",
+        "192.168.1",
+        "192.168.1.1.1",
+        "abc.def.ghi.jkl",
+        "",
+        " ",
+        "192.168.1.1/33",
+    ]
+
+
+# ============================================================================
+# PORT EDGE CASE FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def boundary_ports():
+    """Return boundary port values for testing."""
+    return {
+        "min_valid": 1,
+        "max_valid": 65535,
+        "below_min": 0,
+        "above_max": 65536,
+        "well_known_max": 1023,
+        "registered_min": 1024,
+        "registered_max": 49151,
+        "ephemeral_min": 49152,
+    }
+
+
+@pytest.fixture
+def common_service_ports():
+    """Return common service ports for testing."""
+    return {
+        "ftp": 21,
+        "ssh": 22,
+        "telnet": 23,
+        "smtp": 25,
+        "dns": 53,
+        "http": 80,
+        "pop3": 110,
+        "imap": 143,
+        "https": 443,
+        "smb": 445,
+        "mysql": 3306,
+        "rdp": 3389,
+        "postgresql": 5432,
+    }
+
+
+# ============================================================================
+# CREDENTIAL EDGE CASE FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def special_character_credentials():
+    """Return credentials with special characters for testing."""
+    return [
+        ("admin", "P@$$w0rd!"),
+        ("user'name", "pass\"word"),
+        ("user;drop", "pass|pipe"),
+        ("admin\x00user", "pass\x00word"),
+        ("user\nname", "pass\nword"),
+    ]
+
+
+@pytest.fixture
+def unicode_credentials():
+    """Return credentials with unicode characters for testing."""
+    return [
+        ("admin", "password"),      # ASCII
+        ("usuario", "contrasena"),  # Spanish ASCII
+        ("user", "\u5bc6\u7801"),   # Chinese for "password"
+        ("\u7528\u6237", "pass"),   # Chinese for "user"
+    ]
+
+
+@pytest.fixture
+def empty_credentials():
+    """Return empty credential variations for testing."""
+    return [
+        ("", "password"),
+        ("admin", ""),
+        ("", ""),
+        (" ", " "),
+    ]
+
+
+@pytest.fixture
+def long_credentials():
+    """Return long credential values for testing."""
+    return [
+        ("a" * 100, "password"),
+        ("admin", "p" * 100),
+        ("a" * 256, "p" * 256),
+        ("a" * 1000, "p" * 1000),
+    ]
+
+
+# ============================================================================
+# ENCODING EDGE CASE FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def sample_shellcode():
+    """Return sample shellcode bytes for testing."""
+    # NOP sled pattern (safe for testing)
+    return b"\x90" * 10 + b"\xcc"  # NOPs + INT3
+
+
+@pytest.fixture
+def empty_payload():
+    """Return empty payload for testing."""
+    return b""
+
+
+@pytest.fixture
+def null_heavy_payload():
+    """Return payload with many null bytes."""
+    return b"\x00" * 50 + b"\x41" * 10 + b"\x00" * 50
+
+
+@pytest.fixture
+def all_bytes_payload():
+    """Return payload containing all byte values."""
+    return bytes(range(256))
+
+
+@pytest.fixture
+def encoding_keys():
+    """Return various encoding keys for testing."""
+    return {
+        "null": b"\x00",
+        "ones": b"\xff",
+        "single": b"\xaa",
+        "multi": b"\x11\x22\x33\x44",
+        "long": b"thisisaverylongkey" * 10,
+    }
