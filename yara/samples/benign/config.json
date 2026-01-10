@@ -1,0 +1,23 @@
+{
+    "application": {
+        "name": "Sample Application",
+        "version": "1.0.0",
+        "description": "A benign configuration file for YARA testing"
+    },
+    "settings": {
+        "debug": false,
+        "logLevel": "info",
+        "maxRetries": 3,
+        "timeout": 30
+    },
+    "database": {
+        "host": "localhost",
+        "port": 5432,
+        "name": "sample_db"
+    },
+    "features": {
+        "caching": true,
+        "compression": true,
+        "analytics": false
+    }
+}

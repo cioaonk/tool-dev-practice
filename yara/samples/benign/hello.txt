@@ -1,0 +1,11 @@
+Hello World!
+
+This is a simple text file used for YARA rule testing.
+It contains no malicious content and should not trigger any detection rules.
+
+Contents:
+- Meeting notes from yesterday
+- Shopping list: milk, eggs, bread
+- Random thoughts about the weather
+
+This file is intentionally benign for false positive testing.
