@@ -40,6 +40,8 @@ from .widgets.output_viewer import OutputViewer
 from .widgets.status_bar import ToolsmithStatusBar
 from .visualizers.attack_visualizer import AttackVisualizer
 from .screens.tool_config import ToolConfigScreen
+from .screens.docker_screen import DockerScreen
+from .screens.network_screen import NetworkScreen
 
 
 @dataclass
@@ -146,6 +148,8 @@ class DashboardScreen(Screen):
         Binding("h", "toggle_help", "Help", show=True),
         Binding("r", "refresh", "Refresh", show=True),
         Binding("c", "clear_output", "Clear", show=True),
+        Binding("D", "open_docker", "Docker", show=True),
+        Binding("N", "open_network", "Network", show=True),
         Binding("escape", "cancel_operation", "Cancel", show=False),
     ]
 
@@ -209,6 +213,16 @@ class DashboardScreen(Screen):
         """Cancel the current operation."""
         self.log_message("Operation cancelled", level="warning")
         self.update_status("cancelled")
+
+    def action_open_docker(self) -> None:
+        """Open the Docker management screen."""
+        self.log_message("Opening Docker management screen...", level="info")
+        self.app.push_screen(DockerScreen())
+
+    def action_open_network(self) -> None:
+        """Open the CORE Network management screen."""
+        self.log_message("Opening CORE Network management screen...", level="info")
+        self.app.push_screen(NetworkScreen())
 
     async def on_tool_panel_tool_selected(self, message: ToolPanel.ToolSelected) -> None:
         """Handle tool selection from the tool panel."""
