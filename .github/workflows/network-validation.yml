@@ -1,0 +1,440 @@
+# CPTC11 Network Validation Workflow
+# Validates IMUNES/CORE network topology files (.imn)
+#
+# Validates:
+#   - Syntax correctness of .imn files
+#   - Node configuration completeness
+#   - Link connectivity
+#   - IP address validity
+#   - Service definitions
+#
+# Triggers:
+#   - Push to main branch (when network files change)
+#   - Pull requests targeting main branch (when network files change)
+
+name: Network Validation
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'networks/**/*.imn'
+      - '.github/workflows/network-validation.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'networks/**/*.imn'
+      - '.github/workflows/network-validation.yml'
+  workflow_dispatch:  # Allow manual triggering
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =============================================================================
+  # Validate .imn Network Files
+  # =============================================================================
+  validate-networks:
+    name: Validate Network Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Find .imn files
+        id: find-files
+        run: |
+          # Find all .imn files
+          imn_files=$(find networks -name "*.imn" -type f 2>/dev/null || true)
+          if [ -z "$imn_files" ]; then
+            echo "No .imn files found"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found .imn files:"
+            echo "$imn_files"
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create validation script
+        if: steps.find-files.outputs.found == 'true'
+        run: |
+          cat << 'PYTHON_SCRIPT' > validate_imn.py
+          #!/usr/bin/env python3
+          """
+          IMN Network File Validator
+          Validates IMUNES/CORE .imn topology files for syntax and configuration.
+          """
+          import re
+          import sys
+          import ipaddress
+          from pathlib import Path
+          from dataclasses import dataclass
+          from typing import Optional
+
+
+          @dataclass
+          class ValidationResult:
+              """Stores validation results for a network file."""
+              file_path: str
+              valid: bool
+              errors: list
+              warnings: list
+              nodes: int
+              links: int
+              subnets: list
+
+
+          def validate_ip_address(ip_str: str) -> tuple[bool, Optional[str]]:
+              """Validate an IP address with optional CIDR notation."""
+              try:
+                  # Handle IP/CIDR format
+                  if '/' in ip_str:
+                      ipaddress.ip_interface(ip_str)
+                  else:
+                      ipaddress.ip_address(ip_str)
+                  return True, None
+              except ValueError as e:
+                  return False, str(e)
+
+
+          def validate_imn_file(file_path: str) -> ValidationResult:
+              """Validate a single .imn file."""
+              errors = []
+              warnings = []
+              nodes = []
+              links = []
+              subnets = set()
+
+              try:
+                  with open(file_path, 'r') as f:
+                      content = f.read()
+              except Exception as e:
+                  return ValidationResult(
+                      file_path=file_path,
+                      valid=False,
+                      errors=[f"Cannot read file: {e}"],
+                      warnings=[],
+                      nodes=0,
+                      links=0,
+                      subnets=[]
+                  )
+
+              # Check for basic structure
+              if not content.strip():
+                  errors.append("File is empty")
+                  return ValidationResult(
+                      file_path=file_path,
+                      valid=False,
+                      errors=errors,
+                      warnings=warnings,
+                      nodes=0,
+                      links=0,
+                      subnets=[]
+                  )
+
+              # Find all node definitions
+              node_pattern = r'node\s+(\w+)\s*\{'
+              node_matches = re.findall(node_pattern, content)
+              nodes = node_matches
+
+              # Find all link definitions
+              link_pattern = r'link\s+(\w+)\s*\{'
+              link_matches = re.findall(link_pattern, content)
+              links = link_matches
+
+              # Validate node configurations
+              node_block_pattern = r'node\s+(\w+)\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}'
+              for match in re.finditer(node_block_pattern, content, re.DOTALL):
+                  node_name = match.group(1)
+                  node_content = match.group(2)
+
+                  # Check for hostname
+                  if 'hostname' not in node_content:
+                      warnings.append(f"Node {node_name}: missing hostname configuration")
+
+                  # Check for type
+                  if 'type' not in node_content:
+                      warnings.append(f"Node {node_name}: missing type specification")
+
+                  # Validate IP addresses
+                  ip_pattern = r'ip\s+address\s+([^\s\n]+)'
+                  for ip_match in re.finditer(ip_pattern, node_content):
+                      ip_str = ip_match.group(1)
+                      valid, error = validate_ip_address(ip_str)
+                      if not valid:
+                          errors.append(f"Node {node_name}: invalid IP address '{ip_str}': {error}")
+                      elif '/' in ip_str:
+                          try:
+                              network = ipaddress.ip_network(ip_str, strict=False)
+                              subnets.add(str(network))
+                          except ValueError:
+                              pass
+
+              # Validate link configurations
+              link_block_pattern = r'link\s+(\w+)\s*\{([^}]+)\}'
+              for match in re.finditer(link_block_pattern, content):
+                  link_name = match.group(1)
+                  link_content = match.group(2)
+
+                  # Check for nodes in link
+                  nodes_in_link = re.search(r'nodes\s*\{([^}]+)\}', link_content)
+                  if not nodes_in_link:
+                      errors.append(f"Link {link_name}: missing nodes definition")
+                  else:
+                      linked_nodes = re.findall(r'\w+', nodes_in_link.group(1))
+                      for linked_node in linked_nodes:
+                          if linked_node not in nodes:
+                              errors.append(f"Link {link_name}: references undefined node '{linked_node}'")
+
+              # Check for canvas definition
+              if 'canvas' not in content:
+                  warnings.append("No canvas definition found")
+
+              # Check for global options
+              if 'option global' not in content:
+                  warnings.append("No global options defined")
+
+              # Check balanced braces
+              open_braces = content.count('{')
+              close_braces = content.count('}')
+              if open_braces != close_braces:
+                  errors.append(f"Unbalanced braces: {open_braces} opening, {close_braces} closing")
+
+              return ValidationResult(
+                  file_path=file_path,
+                  valid=len(errors) == 0,
+                  errors=errors,
+                  warnings=warnings,
+                  nodes=len(nodes),
+                  links=len(links),
+                  subnets=list(subnets)
+              )
+
+
+          def main():
+              """Main entry point."""
+              import argparse
+              parser = argparse.ArgumentParser(description='Validate .imn network files')
+              parser.add_argument('files', nargs='+', help='IMN files to validate')
+              parser.add_argument('--strict', action='store_true', help='Treat warnings as errors')
+              args = parser.parse_args()
+
+              all_valid = True
+              results = []
+
+              for file_path in args.files:
+                  result = validate_imn_file(file_path)
+                  results.append(result)
+
+                  print(f"\n{'='*60}")
+                  print(f"File: {result.file_path}")
+                  print(f"{'='*60}")
+                  print(f"Nodes: {result.nodes}")
+                  print(f"Links: {result.links}")
+                  print(f"Subnets: {', '.join(result.subnets) if result.subnets else 'None detected'}")
+
+                  if result.errors:
+                      print(f"\nErrors ({len(result.errors)}):")
+                      for error in result.errors:
+                          print(f"  ERROR: {error}")
+
+                  if result.warnings:
+                      print(f"\nWarnings ({len(result.warnings)}):")
+                      for warning in result.warnings:
+                          print(f"  WARN: {warning}")
+
+                  if result.valid:
+                      print("\nStatus: VALID")
+                  else:
+                      print("\nStatus: INVALID")
+                      all_valid = False
+
+                  if args.strict and result.warnings:
+                      all_valid = False
+
+              # Summary
+              print(f"\n{'='*60}")
+              print("SUMMARY")
+              print(f"{'='*60}")
+              print(f"Files validated: {len(results)}")
+              print(f"Valid: {sum(1 for r in results if r.valid)}")
+              print(f"Invalid: {sum(1 for r in results if not r.valid)}")
+              print(f"Total nodes: {sum(r.nodes for r in results)}")
+              print(f"Total links: {sum(r.links for r in results)}")
+
+              sys.exit(0 if all_valid else 1)
+
+
+          if __name__ == '__main__':
+              main()
+          PYTHON_SCRIPT
+          chmod +x validate_imn.py
+
+      - name: Validate .imn files
+        if: steps.find-files.outputs.found == 'true'
+        run: |
+          echo "Validating network topology files..."
+          python validate_imn.py networks/*.imn
+
+      - name: Generate network topology report
+        if: steps.find-files.outputs.found == 'true'
+        run: |
+          echo "## Network Topology Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for imn_file in networks/*.imn; do
+            if [ -f "$imn_file" ]; then
+              filename=$(basename "$imn_file")
+              echo "### $filename" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+
+              # Count nodes
+              node_count=$(grep -c "^node " "$imn_file" 2>/dev/null || echo "0")
+              link_count=$(grep -c "^link " "$imn_file" 2>/dev/null || echo "0")
+
+              echo "- **Nodes:** $node_count" >> $GITHUB_STEP_SUMMARY
+              echo "- **Links:** $link_count" >> $GITHUB_STEP_SUMMARY
+
+              # Extract network name from canvas
+              canvas_name=$(grep -oP 'name \{[^}]*\}' "$imn_file" | head -1 | sed 's/name {\(.*\)}/\1/' || echo "Unknown")
+              echo "- **Network Name:** $canvas_name" >> $GITHUB_STEP_SUMMARY
+
+              # List unique subnets
+              subnets=$(grep -oP 'ip address \K[0-9.]+/[0-9]+' "$imn_file" | while read ip; do
+                python3 -c "import ipaddress; print(ipaddress.ip_network('$ip', strict=False))" 2>/dev/null
+              done | sort -u | tr '\n' ', ' | sed 's/,$//')
+              echo "- **Subnets:** $subnets" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Check for network diagram consistency
+        if: steps.find-files.outputs.found == 'true'
+        run: |
+          echo "Checking network diagram consistency..."
+
+          for imn_file in networks/*.imn; do
+            if [ -f "$imn_file" ]; then
+              echo "Checking: $imn_file"
+
+              # Extract all node names
+              nodes=$(grep -oP '^node \K\w+' "$imn_file" | sort)
+
+              # Extract all nodes referenced in links
+              link_nodes=$(grep -oP 'nodes \{[^}]+\}' "$imn_file" | grep -oP '\w+' | grep -v nodes | sort -u)
+
+              # Check for orphan nodes (nodes not in any link)
+              for node in $nodes; do
+                if ! echo "$link_nodes" | grep -q "^${node}$"; then
+                  echo "  Warning: Node '$node' is not connected to any link"
+                fi
+              done
+
+              # Check for duplicate node names
+              duplicates=$(echo "$nodes" | uniq -d)
+              if [ -n "$duplicates" ]; then
+                echo "  Error: Duplicate node names found: $duplicates"
+              fi
+            fi
+          done
+
+      - name: Validation summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Validation complete.** Network topology files have been checked for:" >> $GITHUB_STEP_SUMMARY
+          echo "- Syntax correctness" >> $GITHUB_STEP_SUMMARY
+          echo "- Node configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- IP address validity" >> $GITHUB_STEP_SUMMARY
+          echo "- Link connectivity" >> $GITHUB_STEP_SUMMARY
+          echo "- Brace balancing" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Network Documentation Generation
+  # =============================================================================
+  generate-docs:
+    name: Generate Network Documentation
+    needs: validate-networks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate network inventory
+        run: |
+          echo "Generating network inventory..."
+
+          # Create inventory file
+          cat << 'EOF' > network-inventory.md
+          # CPTC11 Network Inventory
+
+          This document is auto-generated from the network topology files.
+
+          EOF
+
+          for imn_file in networks/*.imn; do
+            if [ -f "$imn_file" ]; then
+              filename=$(basename "$imn_file" .imn)
+              echo "## $filename" >> network-inventory.md
+              echo "" >> network-inventory.md
+
+              # Extract hostnames and IPs
+              echo "### Hosts" >> network-inventory.md
+              echo "" >> network-inventory.md
+              echo "| Hostname | IP Address | Type |" >> network-inventory.md
+              echo "|----------|------------|------|" >> network-inventory.md
+
+              # Parse node blocks for hostname and IP
+              python3 << PYTHON_DOC
+          import re
+
+          with open('$imn_file', 'r') as f:
+              content = f.read()
+
+          # Find all node blocks
+          node_pattern = r'node\s+(\w+)\s*\{(.*?)\n\}'
+          for match in re.finditer(node_pattern, content, re.DOTALL):
+              node_id = match.group(1)
+              block = match.group(2)
+
+              # Extract hostname
+              hostname_match = re.search(r'hostname\s+(\S+)', block)
+              hostname = hostname_match.group(1) if hostname_match else node_id
+
+              # Extract type
+              type_match = re.search(r'type\s+(\S+)', block)
+              node_type = type_match.group(1) if type_match else 'unknown'
+
+              # Extract IP addresses
+              ip_matches = re.findall(r'ip address\s+([^\s\n]+)', block)
+              ip_addr = ', '.join(ip_matches) if ip_matches else 'N/A'
+
+              print(f"| {hostname} | {ip_addr} | {node_type} |")
+          PYTHON_DOC
+
+              echo "" >> network-inventory.md
+            fi
+          done
+
+          # Display generated inventory
+          cat network-inventory.md
+
+      - name: Upload network inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-inventory
+          path: network-inventory.md
+          retention-days: 30

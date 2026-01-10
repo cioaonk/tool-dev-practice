@@ -1,23 +1,52 @@
 """
 Pytest configuration and shared fixtures for CPTC11 test suite.
 
-This module contains fixtures that can be used across all test modules.
+This module contains fixtures that can be used across all test modules,
+including edge case tests, fuzz tests, and integration tests.
 """
 
 import os
 import shutil
+import socket
+import stat
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
 
 # ============================================================================
-# HYPOTHESIS CONFIGURATION FOR CI/CD
+# CUSTOM PYTEST MARKERS
 # ============================================================================
 
 def pytest_configure(config):
-    """Configure Hypothesis profiles for different environments."""
+    """Configure pytest with custom markers and Hypothesis profiles."""
+
+    # Register custom markers
+    config.addinivalue_line(
+        "markers", "edge_case: mark test as an edge case test"
+    )
+    config.addinivalue_line(
+        "markers", "slow: mark test as slow running"
+    )
+    config.addinivalue_line(
+        "markers", "security: mark test as security-focused"
+    )
+    config.addinivalue_line(
+        "markers", "fuzz: mark test as a fuzz/property-based test"
+    )
+    config.addinivalue_line(
+        "markers", "integration: mark test as an integration test"
+    )
+    config.addinivalue_line(
+        "markers", "network: mark test as requiring network access"
+    )
+    config.addinivalue_line(
+        "markers", "requires_root: mark test as requiring root/admin privileges"
+    )
+
+    # Configure Hypothesis profiles
     try:
         from hypothesis import settings, Verbosity, Phase
 
@@ -60,6 +89,22 @@ def pytest_configure(config):
     except ImportError:
         # Hypothesis not installed, skip configuration
         pass
+
+
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection to add markers based on test location."""
+    for item in items:
+        # Auto-add edge_case marker for tests in edge_cases directory
+        if "edge_cases" in str(item.fspath):
+            item.add_marker(pytest.mark.edge_case)
+
+        # Auto-add fuzz marker for tests in fuzz directory
+        if "fuzz" in str(item.fspath):
+            item.add_marker(pytest.mark.fuzz)
+
+        # Auto-add integration marker for tests in integration directory
+        if "integration" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
 
 
 # ============================================================================

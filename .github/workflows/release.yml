@@ -1,0 +1,289 @@
+# CPTC11 Release Workflow
+# Creates releases with compiled artifacts
+#
+# Triggers:
+#   - Push of version tags (v*)
+#   - Manual workflow dispatch
+#
+# Artifacts:
+#   - Go binaries for multiple platforms
+#   - Python package archive
+#   - Network topology files
+#   - Documentation
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  GO_VERSION: "1.21"
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  # =============================================================================
+  # Build Go Binaries for Multiple Platforms
+  # =============================================================================
+  build-go:
+    name: Build Go Binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Build Go binaries
+        working-directory: golang
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          # Create output directory
+          mkdir -p dist/${{ matrix.goos }}-${{ matrix.goarch }}
+
+          # Set binary extension for Windows
+          ext=""
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            ext=".exe"
+          fi
+
+          # Build main file_info
+          echo "Building file_info for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          go build -v -ldflags="-s -w" -o dist/${{ matrix.goos }}-${{ matrix.goarch }}/file_info${ext} file_info.go
+
+          # Build tools
+          for dir in tools/*/; do
+            if [ -d "$dir" ]; then
+              tool_name=$(basename "$dir")
+              for gofile in "$dir"*.go; do
+                if [ -f "$gofile" ]; then
+                  echo "Building $tool_name for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+                  go build -v -ldflags="-s -w" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/${tool_name}${ext}" "$gofile" 2>/dev/null || {
+                    echo "Warning: Failed to build $gofile (may have platform-specific dependencies)"
+                  }
+                fi
+              done
+            fi
+          done
+
+          # List built binaries
+          echo "Built binaries:"
+          ls -la dist/${{ matrix.goos }}-${{ matrix.goarch }}/
+
+      - name: Create archive
+        working-directory: golang
+        run: |
+          cd dist
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            zip -r ../cptc11-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip ${{ matrix.goos }}-${{ matrix.goarch }}
+          else
+            tar -czvf ../cptc11-go-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ matrix.goos }}-${{ matrix.goarch }}
+          fi
+
+      - name: Upload Go artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: golang/cptc11-go-*
+          retention-days: 7
+
+  # =============================================================================
+  # Package Python Tools
+  # =============================================================================
+  build-python:
+    name: Package Python Tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Create Python package
+        run: |
+          # Create release directory
+          mkdir -p release/python
+
+          # Copy Python tools
+          cp -r python/tools release/python/
+          cp -r python/tui release/python/
+          cp python/*.py release/python/ 2>/dev/null || true
+          cp python/requirements-test.txt release/python/
+          cp python/pyproject.toml release/python/
+
+          # Create archive
+          cd release
+          tar -czvf ../cptc11-python-tools.tar.gz python
+
+      - name: Upload Python artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-tools
+          path: cptc11-python-tools.tar.gz
+          retention-days: 7
+
+  # =============================================================================
+  # Package Network Topologies
+  # =============================================================================
+  build-networks:
+    name: Package Network Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create networks package
+        run: |
+          # Create archive of network files
+          tar -czvf cptc11-networks.tar.gz networks/
+
+      - name: Upload network artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-topologies
+          path: cptc11-networks.tar.gz
+          retention-days: 7
+
+  # =============================================================================
+  # Create GitHub Release
+  # =============================================================================
+  create-release:
+    name: Create Release
+    needs: [build-go, build-python, build-networks]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # Move Go binaries
+          find artifacts -name "*.tar.gz" -exec mv {} release-assets/ \;
+          find artifacts -name "*.zip" -exec mv {} release-assets/ \;
+
+          # List all release assets
+          echo "Release assets:"
+          ls -la release-assets/
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "prerelease=${{ github.event.inputs.prerelease }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          cat << 'EOF' > release-notes.md
+          ## CPTC11 Security Testing Toolkit
+
+          ### What's Included
+
+          **Go Tools** (Cross-platform binaries)
+          - `file_info` - File metadata and hash calculator
+          - Network scanner tools
+          - Port scanner
+          - Service fingerprinter
+          - And more...
+
+          **Python Tools**
+          - Security testing toolkit
+          - TUI interface for tool management
+          - Test suite and fuzzing framework
+
+          **Network Topologies**
+          - CORE network simulation files (.imn)
+          - Corporate network simulation
+          - Small business network simulation
+
+          ### Platforms
+
+          | Platform | Architecture |
+          |----------|--------------|
+          | Linux | amd64, arm64 |
+          | macOS | amd64, arm64 |
+          | Windows | amd64 |
+
+          ### Installation
+
+          1. Download the appropriate archive for your platform
+          2. Extract the archive
+          3. Add binaries to your PATH
+
+          ### Important Notice
+
+          This toolkit contains security testing tools designed for authorized
+          penetration testing and security research. Use responsibly and only
+          on systems you have permission to test.
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: CPTC11 ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          files: release-assets/*
+          fail_on_unmatched_files: false
+
+      - name: Release summary
+        run: |
+          echo "## Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ls -1 release-assets/ >> $GITHUB_STEP_SUMMARY
