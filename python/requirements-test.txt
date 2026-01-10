@@ -1,0 +1,26 @@
+# CPTC11 Test Requirements
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest>=7.0.0
+
+# Test coverage
+pytest-cov>=4.0.0
+
+# Mock support (included in pytest, but explicit for clarity)
+pytest-mock>=3.0.0
+
+# Timeout support for tests
+pytest-timeout>=2.0.0
+
+# Test ordering (optional)
+pytest-ordering>=0.6
+
+# HTML test reports (optional)
+pytest-html>=3.0.0
+
+# Benchmark tests (optional)
+pytest-benchmark>=4.0.0
+
+# Property-based testing (optional)
+hypothesis>=6.0.0
