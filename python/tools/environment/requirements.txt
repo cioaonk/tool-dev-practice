@@ -1,0 +1,20 @@
+# Penetration Testing Toolkit - Python Requirements
+# =================================================
+# All tools are designed to work with Python standard library only.
+# No external dependencies required for core functionality.
+#
+# Optional dependencies for enhanced features:
+# (uncomment to install)
+
+# paramiko>=2.7.0           # Full SSH support for credential-validator
+# pycryptodome>=3.9.0       # Additional encryption algorithms for hash-cracker
+# requests>=2.25.0          # Alternative HTTP client (http-request-tool already uses stdlib)
+# python-nmap>=0.6.0        # Nmap integration for port-scanner
+# impacket>=0.9.0           # Full SMB/MSRPC support for smb-enumerator
+
+# Testing and Development
+# pytest>=6.0.0
+# pytest-cov>=2.0.0
+# mypy>=0.800
+# black>=21.0
+# flake8>=3.9.0

@@ -1,0 +1,2 @@
+# This directory contains offensive security tools developed by the Toolsmith Agent
+# Each tool will have its own subdirectory with tool.py, README.md, and tests/

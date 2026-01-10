@@ -1,0 +1,423 @@
+/* Security Toolsmith TUI - Main Stylesheet */
+
+/* ========================================
+   Global Styles
+   ======================================== */
+
+Screen {
+    background: $surface;
+}
+
+/* ========================================
+   Dashboard Layout
+   ======================================== */
+
+#dashboard-container {
+    layout: grid;
+    grid-size: 3 2;
+    grid-columns: 1fr 2fr 1fr;
+    grid-rows: 3fr 1fr;
+    padding: 1;
+}
+
+/* ========================================
+   Tool Panel (Left Sidebar)
+   ======================================== */
+
+#tool-panel {
+    column-span: 1;
+    row-span: 2;
+    border: solid $primary;
+    background: $surface-darken-1;
+    padding: 1;
+}
+
+#tool-panel-title {
+    text-style: bold;
+    color: $primary;
+    text-align: center;
+    padding-bottom: 1;
+}
+
+#tool-list {
+    height: auto;
+    max-height: 100%;
+}
+
+.tool-item {
+    padding: 0 1;
+    height: 3;
+    background: $surface;
+    margin-bottom: 1;
+    border: round $secondary;
+}
+
+.tool-item:hover {
+    background: $primary-darken-1;
+}
+
+.tool-item:focus {
+    background: $primary;
+    border: round $accent;
+}
+
+.tool-item.--selected {
+    background: $primary;
+    border: double $accent;
+}
+
+/* ========================================
+   Main Content Area
+   ======================================== */
+
+#main-content {
+    column-span: 2;
+    row-span: 1;
+    border: solid $secondary;
+    background: $surface-darken-1;
+    padding: 1;
+}
+
+#content-header {
+    dock: top;
+    height: 3;
+    background: $surface-darken-2;
+    padding: 0 1;
+    border-bottom: solid $primary;
+}
+
+#content-header-title {
+    text-style: bold;
+    color: $text;
+}
+
+/* ========================================
+   Output Viewer
+   ======================================== */
+
+#output-viewer {
+    height: 100%;
+    background: $surface-darken-2;
+    padding: 1;
+}
+
+#output-log {
+    height: 100%;
+    scrollbar-background: $surface;
+    scrollbar-color: $primary;
+}
+
+.log-entry {
+    padding: 0 1;
+    margin-bottom: 0;
+}
+
+.log-entry.--info {
+    color: $text;
+}
+
+.log-entry.--success {
+    color: $success;
+}
+
+.log-entry.--warning {
+    color: $warning;
+}
+
+.log-entry.--error {
+    color: $error;
+}
+
+.log-entry.--debug {
+    color: $text-muted;
+}
+
+/* ========================================
+   Attack Visualizer
+   ======================================== */
+
+#attack-visualizer {
+    column-span: 2;
+    border: solid $warning;
+    background: $surface-darken-1;
+    padding: 1;
+}
+
+#visualizer-title {
+    text-style: bold;
+    color: $warning;
+    text-align: center;
+    padding-bottom: 1;
+}
+
+#attack-display {
+    height: 100%;
+    background: $surface-darken-2;
+    padding: 1;
+}
+
+.attack-node {
+    color: $error;
+}
+
+.attack-path {
+    color: $warning;
+}
+
+.attack-target {
+    color: $success;
+}
+
+/* ========================================
+   Status Bar
+   ======================================== */
+
+#status-bar {
+    dock: bottom;
+    height: 3;
+    background: $primary-darken-2;
+    padding: 0 2;
+    border-top: solid $primary;
+}
+
+#status-bar-content {
+    layout: horizontal;
+    width: 100%;
+    height: 100%;
+    align: center middle;
+}
+
+.status-item {
+    padding: 0 2;
+    height: 1;
+}
+
+.status-label {
+    color: $text-muted;
+}
+
+.status-value {
+    color: $text;
+    text-style: bold;
+}
+
+.status-value.--active {
+    color: $success;
+}
+
+.status-value.--warning {
+    color: $warning;
+}
+
+.status-value.--error {
+    color: $error;
+}
+
+/* ========================================
+   Tool Configuration Modal
+   ======================================== */
+
+#tool-config-modal {
+    align: center middle;
+    background: $surface 80%;
+}
+
+#tool-config-container {
+    width: 60;
+    height: auto;
+    max-height: 80%;
+    background: $surface;
+    border: double $primary;
+    padding: 1 2;
+}
+
+#tool-config-title {
+    text-style: bold;
+    color: $primary;
+    text-align: center;
+    padding-bottom: 1;
+    border-bottom: solid $secondary;
+}
+
+.config-field {
+    margin: 1 0;
+}
+
+.config-label {
+    color: $text;
+    padding-bottom: 0;
+}
+
+.config-input {
+    border: round $secondary;
+    background: $surface-darken-1;
+    padding: 0 1;
+}
+
+.config-input:focus {
+    border: round $primary;
+}
+
+#config-buttons {
+    layout: horizontal;
+    align: center middle;
+    padding-top: 1;
+    border-top: solid $secondary;
+    margin-top: 1;
+}
+
+.config-button {
+    margin: 0 1;
+    min-width: 12;
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+
+Button {
+    border: round $primary;
+    background: $surface;
+    color: $text;
+    padding: 0 2;
+    height: 3;
+}
+
+Button:hover {
+    background: $primary-darken-1;
+}
+
+Button:focus {
+    border: round $accent;
+    background: $primary;
+}
+
+Button.-primary {
+    background: $primary;
+    color: $text;
+}
+
+Button.-primary:hover {
+    background: $primary-lighten-1;
+}
+
+Button.-success {
+    background: $success;
+    color: $text;
+}
+
+Button.-danger {
+    background: $error;
+    color: $text;
+}
+
+/* ========================================
+   Help Panel
+   ======================================== */
+
+#help-panel {
+    layer: above;
+    dock: right;
+    width: 40;
+    height: 100%;
+    background: $surface;
+    border-left: solid $primary;
+    padding: 1;
+    display: none;
+}
+
+#help-panel.--visible {
+    display: block;
+}
+
+#help-title {
+    text-style: bold;
+    color: $primary;
+    text-align: center;
+    padding-bottom: 1;
+}
+
+.help-section {
+    margin: 1 0;
+}
+
+.help-heading {
+    text-style: bold;
+    color: $secondary;
+}
+
+.help-key {
+    color: $accent;
+    text-style: bold;
+}
+
+.help-description {
+    color: $text-muted;
+}
+
+/* ========================================
+   Loading Indicator
+   ======================================== */
+
+#loading-indicator {
+    layer: above;
+    align: center middle;
+    display: none;
+}
+
+#loading-indicator.--visible {
+    display: block;
+}
+
+#loading-container {
+    width: 30;
+    height: 5;
+    background: $surface;
+    border: round $primary;
+    padding: 1;
+    text-align: center;
+}
+
+LoadingIndicator {
+    color: $primary;
+}
+
+/* ========================================
+   Data Table Styles
+   ======================================== */
+
+DataTable {
+    height: 100%;
+    background: $surface-darken-1;
+}
+
+DataTable > .datatable--header {
+    background: $primary-darken-2;
+    color: $text;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $primary;
+    color: $text;
+}
+
+DataTable > .datatable--hover {
+    background: $primary-darken-1;
+}
+
+/* ========================================
+   Progress Bar
+   ======================================== */
+
+ProgressBar {
+    padding: 1;
+}
+
+ProgressBar > .bar--bar {
+    color: $primary;
+}
+
+ProgressBar > .bar--complete {
+    color: $success;
+}
