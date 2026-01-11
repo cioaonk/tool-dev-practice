@@ -1,360 +1,323 @@
-# CPTC Offensive Security Training Materials
+# Welcome to CPTC11 Training
 
-A comprehensive training program for mastering the offensive security toolkit designed for CTF and CPTC competition preparation.
-
----
-
-> **New to security?** Start with the [Glossary](GLOSSARY.md) to understand key terms used throughout these materials.
+A comprehensive offensive security training program designed for CTF competitions, CPTC preparation, and professional security assessments. This library provides structured learning materials that progress from fundamental concepts through advanced evasion techniques.
 
 ---
 
-## Overview
+## Prerequisites
 
-This training package provides structured learning materials for the CPTC offensive security toolkit, progressing from fundamental concepts through advanced techniques. All materials are designed for authorized security testing and competition environments.
+### Required Skills
 
-### Skill Level Guide
+Before starting this training program, you should have:
 
-Throughout these materials, content is marked with skill level indicators:
+- **Basic Networking Knowledge**: Understand IP addresses, ports, and client-server architecture
+- **Command Line Proficiency**: Navigate directories, run commands, and edit files from terminal
+- **Programming Fundamentals**: Basic familiarity with Python scripting
 
-| Level | Symbol | Description | Experience |
-|-------|--------|-------------|------------|
-| Beginner | **[B]** | Foundational concepts and guided exercises | 0-1 years |
-| Intermediate | **[I]** | Applied techniques with strategic guidance | 1-3 years |
-| Advanced | **[A]** | Complex scenarios requiring deep knowledge | 3+ years |
+### Software Requirements
 
-**Recommended Starting Points by Experience:**
-- **Complete beginners**: Read the [Glossary](GLOSSARY.md) first, then start with Phase 1
-- **CTF experience**: Start with the Network Scanner Walkthrough
-- **Professional experience**: Review cheatsheets, focus on competition-specific labs
+| Software | Version | Purpose |
+|----------|---------|---------|
+| Python | 3.8+ | Tool execution and scripting |
+| Git | Latest | Version control and updates |
+| Terminal | bash/zsh/PowerShell | Command execution |
+| Text Editor | Any | Reviewing and editing files |
 
-## Directory Structure
+### Environment Setup
+
+1. **Verify Python Installation**
+```bash
+python3 --version
+# Expected: Python 3.8.x or higher
+```
+
+2. **Clone or Access the Repository**
+```bash
+cd /path/to/cptc11
+```
+
+3. **Install Dependencies**
+```bash
+pip3 install -r python/tools/environment/requirements.txt
+```
+
+4. **Verify Network Access**
+   - Ensure you have connectivity to your lab environment
+   - Confirm firewall rules allow required traffic
+   - Never test against unauthorized systems
+
+---
+
+## Quick Start Guide
+
+Get up and running in 15 minutes with this accelerated introduction.
+
+### Step 1: Environment Verification (3 minutes)
+
+```bash
+# Verify Python
+python3 --version
+
+# Test a tool (planning mode is safe)
+python3 python/tools/network-scanner/tool.py 127.0.0.1 --plan
+```
+
+If you see the planning output without errors, your environment is correctly configured.
+
+### Step 2: First Tool Execution (5 minutes)
+
+Run your first network scan against localhost:
+
+```bash
+# Preview what will happen
+python3 python/tools/network-scanner/tool.py 127.0.0.1 --plan
+
+# Execute the scan
+python3 python/tools/network-scanner/tool.py 127.0.0.1 --verbose
+```
+
+Expected output shows any services running on your local machine.
+
+### Step 3: Review Key Concepts (5 minutes)
+
+Open and read the [Glossary](GLOSSARY.md) to familiarize yourself with essential terms:
+- Reconnaissance
+- Port
+- Service
+- Payload
+- Handler
+
+### Step 4: First Lab Preparation (2 minutes)
+
+Navigate to your first lab exercise:
+
+```bash
+# Review Lab 01
+cat training/labs/lab-01-network-reconnaissance.md
+```
+
+You are now ready to begin the structured training program.
+
+---
+
+## Learning Paths
+
+Choose the path that matches your experience level and goals.
+
+### Beginner Path (4-6 weeks)
+
+For those new to offensive security or with limited practical experience.
+
+1. **Week 1-2: Foundation**
+   - Read [GLOSSARY.md](GLOSSARY.md) thoroughly
+   - Complete [Network Scanner Walkthrough](walkthroughs/network-scanner-walkthrough.md)
+   - Finish [Lab 01: Network Reconnaissance](labs/lab-01-network-reconnaissance.md)
+   - Reference [Network Scanning Cheatsheet](cheatsheets/network-scanning-cheatsheet.md)
+
+2. **Week 3-4: Enumeration**
+   - Complete [Lab 02: Service Exploitation](labs/lab-02-service-exploitation.md)
+   - Complete [Lab 03: Credential Attacks](labs/lab-03-credential-attacks.md)
+   - Study [Tool Commands Cheatsheet](cheatsheets/tool-commands-cheatsheet.md)
+
+3. **Week 5-6: Introduction to Payloads**
+   - Read [Payload Generator Walkthrough](walkthroughs/payload-generator-walkthrough.md)
+   - Complete [Lab 04: Payload Delivery](labs/lab-04-payload-delivery.md) (Level 1-2 tasks only)
+   - Reference [Payload Generation Cheatsheet](cheatsheets/payload-generation-cheatsheet.md)
+
+### Intermediate Path (3-4 weeks)
+
+For those with CTF experience or 1-3 years security background.
+
+1. **Week 1: Reconnaissance Mastery**
+   - Review [Network Scanner Walkthrough](walkthroughs/network-scanner-walkthrough.md)
+   - Complete [Lab 01](labs/lab-01-network-reconnaissance.md) including Challenge Tasks
+   - Complete [Lab 02](labs/lab-02-service-exploitation.md) all tasks
+
+2. **Week 2: Credential and Service Attacks**
+   - Complete [Lab 03: Credential Attacks](labs/lab-03-credential-attacks.md) all tasks
+   - Practice tool chaining for efficient enumeration
+
+3. **Week 3-4: Payload Operations**
+   - Study [Payload Generator Walkthrough](walkthroughs/payload-generator-walkthrough.md)
+   - Complete [Lab 04: Payload Delivery](labs/lab-04-payload-delivery.md) all tasks
+   - Begin [EDR Evasion Walkthrough](walkthroughs/edr-evasion-walkthrough.md)
+
+### Advanced Path (2-3 weeks)
+
+For experienced practitioners focusing on evasion and advanced techniques.
+
+1. **Week 1: Review and Refinement**
+   - Speed-run Labs 01-04 focusing on efficiency
+   - Study all cheatsheets for rapid reference
+   - Identify personal weak areas
+
+2. **Week 2-3: Evasion Techniques**
+   - Complete [EDR Evasion Walkthrough](walkthroughs/edr-evasion-walkthrough.md)
+   - Finish [Lab 05: Evasion Techniques](labs/lab-05-evasion-techniques.md) all tasks
+   - Practice combining multiple techniques
+
+### Blue Team Path (2-3 weeks)
+
+For defenders seeking to understand offensive techniques.
+
+1. **Week 1: Understand the Attack Surface**
+   - [Network Scanner Walkthrough](walkthroughs/network-scanner-walkthrough.md)
+   - [Lab 01](labs/lab-01-network-reconnaissance.md) - Focus on detection sections
+   - Document what attackers look for and how
+
+2. **Week 2: Detection Opportunities**
+   - [Payload Generator Walkthrough](walkthroughs/payload-generator-walkthrough.md) - Focus on detection vectors
+   - Review OPSEC notes in cheatsheets
+   - [EDR Evasion Walkthrough](walkthroughs/edr-evasion-walkthrough.md) - Focus on "Detection Methods" sections
+
+3. **Week 3: Building Defenses**
+   - [Lab 05](labs/lab-05-evasion-techniques.md) Task 8 (Detection Perspective)
+   - Create detection rules based on learned techniques
+   - Document blue team response procedures
+
+### Developer Path (1-2 weeks)
+
+For those contributing to tool development.
+
+1. **Week 1: Tool Architecture**
+   - Review tool README files in `python/tools/*/README.md`
+   - Understand planning mode implementation
+   - Study JSON output formats
+
+2. **Week 2: Integration**
+   - Review test files in `python/tests/`
+   - Understand tool chaining patterns
+   - Study TUI components in `python/tui/`
+
+---
+
+## Training Materials Overview
+
+### Documentation Structure
 
 ```
 training/
-├── README.md                      # This file
-├── GLOSSARY.md                    # Term definitions and quick reference
-├── walkthroughs/                  # Detailed tool guides
+├── README.md                 # This file - Quick start and orientation
+├── TRAINING_INDEX.md         # Complete index of all materials
+├── GLOSSARY.md               # Term definitions and quick reference
+├── walkthroughs/             # Comprehensive step-by-step guides
 │   ├── network-scanner-walkthrough.md    [B/I]
 │   ├── payload-generator-walkthrough.md  [I]
 │   └── edr-evasion-walkthrough.md        [A]
-├── labs/                          # Hands-on exercises
+├── labs/                     # Hands-on exercises
 │   ├── lab-01-network-reconnaissance.md  [B]
 │   ├── lab-02-service-exploitation.md    [I]
 │   ├── lab-03-credential-attacks.md      [I]
 │   ├── lab-04-payload-delivery.md        [I/A]
 │   └── lab-05-evasion-techniques.md      [A]
-├── cheatsheets/                   # Quick reference cards
+├── cheatsheets/              # Quick reference cards
 │   ├── tool-commands-cheatsheet.md
 │   ├── network-scanning-cheatsheet.md
 │   └── payload-generation-cheatsheet.md
-└── feedback/                      # Training feedback reports
+└── feedback/                 # Training feedback reports
 ```
 
-## Prerequisites
+### Skill Level Indicators
 
-### Technical Requirements
+| Symbol | Level | Experience | Description |
+|--------|-------|------------|-------------|
+| [B] | Beginner | 0-1 years | Guided exercises with detailed explanations |
+| [I] | Intermediate | 1-3 years | Applied techniques with strategic guidance |
+| [A] | Advanced | 3+ years | Complex scenarios requiring deep knowledge |
 
-- Python 3.8+ installed and accessible via `python3`
-- Network access to target lab environment (isolated/sandboxed)
-- Root/Administrator access for certain scanning techniques (see note below)
-- Basic familiarity with command-line interfaces (bash, PowerShell, or cmd)
+### Material Types
 
-> **Note on Root/Administrator Access**: Some scanning techniques (SYN scans, ARP discovery) require elevated privileges because they use raw network sockets. If you do not have root access, the tools will fall back to standard TCP connect scans, which work without special privileges but are more detectable.
+- **Walkthroughs**: Comprehensive guides with theory, examples, and troubleshooting
+- **Labs**: Hands-on exercises with objectives, tasks, hints, and solutions
+- **Cheatsheets**: Quick reference cards for commands and workflows
+- **Glossary**: Term definitions and concept explanations
 
-### Knowledge Requirements
+---
 
-| Skill Level | Prerequisites | What This Means |
-|-------------|---------------|-----------------|
-| **Beginner [B]** | Basic networking | Understand what IP addresses (e.g., 192.168.1.1) and ports (e.g., 80, 443) are. See [Glossary](GLOSSARY.md) for definitions. |
-| | Command line navigation | Can open a terminal, navigate directories (cd), run commands |
-| | Client-server architecture | Know that clients request and servers respond |
-| **Intermediate [I]** | TCP/IP fundamentals | Understand the three-way handshake (SYN, SYN-ACK, ACK) |
-| | Common protocols | Know what HTTP, SSH, FTP, SMB do at a high level |
-| | Basic scripting | Can write simple Python or Bash scripts |
-| **Advanced [A]** | OS internals | Understand processes, memory management, DLLs |
-| | Windows API/syscalls | Know how applications interact with the OS kernel |
-| | Detection mechanisms | Familiar with how IDS, EDR, and AV detect threats |
+## Getting Help
 
-> **Not sure about your level?** If you do not understand most terms in the Beginner row, start with the [Glossary](GLOSSARY.md) and external resources in the Support section.
+### Self-Service Resources
 
-## Skill Progression Path
+1. **Glossary**: Check [GLOSSARY.md](GLOSSARY.md) for term definitions
+2. **Planning Mode**: Use `--plan` flag on any tool to preview operations
+3. **Help Flags**: Run any tool with `--help` for usage information
+4. **Lab Hints**: Each lab includes progressive hints in collapsible sections
 
-> **Visual Learning Path**: Start at Phase 1 and work through sequentially. Each phase builds on the previous.
->
-> ```
-> Phase 1 [B]      Phase 2 [I]       Phase 3 [I]       Phase 4 [A]
-> Reconnaissance -> Enumeration  ->  Payloads     ->  Evasion
->       |              |                |               |
->   Network        Services         Shells          EDR Bypass
->   Scanning       Credentials      Encoding        Syscalls
-> ```
+### Troubleshooting Common Issues
 
-### Phase 1: Foundation (Weeks 1-2) [B]
+| Issue | Solution |
+|-------|----------|
+| "Module not found" | Run `pip3 install -r requirements.txt` |
+| "Permission denied" | Some scans require root/admin privileges |
+| "Connection refused" | Verify target is reachable and service is running |
+| "Timeout" | Increase timeout with `--timeout` flag |
 
-**Objective**: Master reconnaissance and enumeration techniques
-
-> **What is reconnaissance?** The information-gathering phase where you discover what systems exist and what services they run. Think of it as mapping the terrain before a journey.
-
-1. **Start Here**: Read `walkthroughs/network-scanner-walkthrough.md`
-2. **Lab Exercise**: Complete `labs/lab-01-network-reconnaissance.md`
-3. **Reference**: Keep `cheatsheets/network-scanning-cheatsheet.md` handy
-
-**Tools Covered**:
-- Network Scanner - discovers live hosts (which computers are on the network)
-- Port Scanner - finds open ports (which services are available)
-- DNS Enumerator - discovers subdomains (finds additional related systems)
-- Service Fingerprinter - identifies versions (what software is running)
-
-**Competencies**:
-- [ ] Perform host discovery on a /24 network (a /24 contains 256 IP addresses)
-- [ ] Identify open ports and running services
-- [ ] Enumerate DNS records and subdomains
-- [ ] Extract service version information
-
-### Phase 2: Exploitation Preparation (Weeks 3-4) [I]
-
-**Objective**: Identify and validate attack vectors
-
-> **What is enumeration?** Going deeper than reconnaissance to extract detailed information - usernames, file shares, configurations - that reveals how to gain access.
-
-1. **Lab Exercise**: Complete `labs/lab-02-service-exploitation.md`
-2. **Lab Exercise**: Complete `labs/lab-03-credential-attacks.md`
-
-**Tools Covered**:
-- SMB Enumerator - finds Windows file shares and system information
-- Credential Validator - tests username/password combinations against services
-- Hash Cracker - recovers passwords from hash values (one-way encrypted passwords)
-
-**Competencies**:
-- [ ] Enumerate SMB shares and permissions
-- [ ] Validate credentials against multiple protocols
-- [ ] Perform dictionary attacks on hash files
-- [ ] Identify credential reuse opportunities
-
-### Phase 3: Payload Development (Weeks 5-6) [I]
-
-**Objective**: Generate and deliver payloads effectively
-
-> **What is a payload?** Code that runs on a target system to provide access. A reverse shell payload makes the target connect back to you, giving you a command line on that system.
-
-1. **Read**: `walkthroughs/payload-generator-walkthrough.md`
-2. **Lab Exercise**: Complete `labs/lab-04-payload-delivery.md`
-3. **Reference**: Use `cheatsheets/payload-generation-cheatsheet.md`
-
-**Tools Covered**:
-- Payload Generator - creates reverse shell code for different platforms
-- Shellcode Encoder - transforms payload to avoid detection signatures
-- Reverse Shell Handler - listens for and manages incoming shell connections
-
-**Competencies**:
-- [ ] Generate platform-appropriate reverse shells
-- [ ] Encode payloads to avoid basic detection
-- [ ] Set up and manage shell handlers
-- [ ] Understand payload delivery mechanisms
-
-### Phase 4: Evasion Techniques (Weeks 7-8) [A]
-
-**Objective**: Bypass defensive controls
-
-> **Prerequisite Warning**: This phase requires understanding of Windows internals, memory management, and API concepts. Complete all previous phases before attempting.
-
-> **What is EDR?** Endpoint Detection and Response - advanced security software that monitors system behavior, not just known malware signatures. Evading EDR requires understanding how it detects threats.
-
-1. **Read**: `walkthroughs/edr-evasion-walkthrough.md`
-2. **Lab Exercise**: Complete `labs/lab-05-evasion-techniques.md`
-
-**Tools Covered**:
-- EDR Evasion Toolkit - generates code to bypass security monitoring
-- AMSI Bypass - allows PowerShell scripts to run without being scanned
-- Process Hollowing - hides malicious code inside legitimate processes
-
-**Competencies**:
-- [ ] Understand EDR hook mechanisms (how security software intercepts API calls)
-- [ ] Generate direct syscall stubs (calling the OS kernel directly)
-- [ ] Apply appropriate evasion techniques based on target defenses
-- [ ] Map techniques to MITRE ATT&CK framework (industry-standard threat classification)
-
-## How to Use These Materials
-
-### Walkthroughs
-
-Walkthroughs provide comprehensive, step-by-step guidance for each tool category. They include:
-
-- **Conceptual Foundation**: Theory behind the techniques
-- **Tool Deep-Dive**: Detailed feature exploration
-- **Practical Examples**: Real command sequences with expected output
-- **Troubleshooting**: Common issues and solutions
-
-**Recommended Approach**:
-1. Read the entire walkthrough once for overview
-2. Follow along with commands in your lab environment
-3. Experiment with variations on the examples
-4. Return to specific sections as reference material
-
-### Lab Exercises
-
-Labs provide hands-on challenges with progressive difficulty:
-
-- **Level 1 (Foundation)**: Guided exercises with detailed instructions
-- **Level 2 (Application)**: Semi-guided with strategic hints
-- **Level 3 (Integration)**: Minimal guidance, realistic scenarios
-- **Level 4 (Mastery)**: Complex challenges for competition preparation
-
-**Lab Structure**:
-1. **Objective**: What you will accomplish
-2. **Environment**: Required setup and configuration
-3. **Scenario**: Realistic operational context
-4. **Tasks**: Specific deliverables
-5. **Hints**: Progressive assistance (try without first)
-6. **Solution**: Complete walkthrough (instructor use)
-7. **Validation**: How to verify success
-
-### Cheatsheets
-
-Quick reference cards for rapid command lookup during:
-- Competition time pressure
-- Real engagement scenarios
-- Quick refresher before assessments
-
-**Note**: Understand the commands fully before relying on cheatsheets. They supplement, not replace, deep knowledge.
-
-## Competition Preparation Tips
-
-### Time Management
-
-| Phase | Typical Allocation |
-|-------|-------------------|
-| Reconnaissance | 20-25% |
-| Service Enumeration | 15-20% |
-| Vulnerability Assessment | 20-25% |
-| Exploitation | 25-30% |
-| Documentation | 10-15% |
-
-### Operational Discipline
-
-1. **Always use planning mode first** (`--plan`) in competition environments
-2. **Document everything** - timestamps, commands, outputs
-3. **Validate findings** before reporting
-4. **Maintain stealth** where required by competition rules
-5. **Rotate techniques** to avoid detection patterns
-
-### Common Mistakes to Avoid
-
-- Scanning too aggressively and triggering alerts
-- Missing easy wins while chasing complex exploits
-- Forgetting to enumerate thoroughly before exploiting
-- Not validating credentials across multiple services
-- Neglecting documentation during time pressure
-
-## Environment Setup
-
-### Lab Network Requirements
-
-```
-Attacker Machine (Your System)
-├── Python 3.6+
-├── Network access to lab range
-└── All toolkit tools installed
-
-Target Lab Network (Isolated)
-├── Various target hosts
-├── Multiple services (HTTP, SSH, SMB, etc.)
-└── Simulated enterprise environment
-```
-
-### Verification Commands
+### Tool-Specific Help
 
 ```bash
-# Verify Python version
-python3 --version
+# View tool help
+python3 python/tools/<tool-name>/tool.py --help
 
-# Test network scanner (from project root)
-python3 python/tools/network-scanner/tool.py 127.0.0.1 --plan
+# Preview operation safely
+python3 python/tools/<tool-name>/tool.py <args> --plan
 
-# Verify connectivity to lab
-ping <lab-gateway-ip>
+# Read tool README
+cat python/tools/<tool-name>/README.md
 ```
+
+### External Resources
+
+- **MITRE ATT&CK Framework**: [attack.mitre.org](https://attack.mitre.org) - Technique reference
+- **OWASP**: [owasp.org](https://owasp.org) - Web security guidance
+- **HackTheBox Academy**: [academy.hackthebox.com](https://academy.hackthebox.com) - Practice environments
+- **TryHackMe**: [tryhackme.com](https://tryhackme.com) - Guided learning paths
+
+### Reporting Issues
+
+If you encounter problems with training materials:
+
+1. Document the specific issue and steps to reproduce
+2. Note your environment (OS, Python version, tool version)
+3. Check if the issue persists in planning mode
+4. Submit feedback through appropriate channels
+
+---
 
 ## Safety and Ethics
 
 ### Authorized Use Only
 
-All tools and techniques in this training are for:
+All tools and techniques in this training program are intended for:
 - Authorized penetration testing engagements
 - CTF and CPTC competitions
-- Educational lab environments
+- Isolated lab environments
 - Security research with proper authorization
 
 ### Never Use Against
 
-- Systems you do not own or have written authorization to test
-- Production environments without explicit approval
-- Third-party systems without contracts in place
-- Public networks or internet-facing targets without authorization
+- Systems without explicit written authorization
+- Production environments without approval
+- Third-party systems without contracts
+- Public networks or internet targets without permission
 
-### Competition Ethics
+### Competition Conduct
 
 - Follow all competition rules and scope limitations
 - Report discovered vulnerabilities appropriately
 - Do not interfere with other teams
-- Maintain professionalism in all interactions
-
-## Support and Resources
-
-### Documentation
-
-- Individual tool README files in `python/tools/<tool-name>/README.md`
-- This training guide and associated materials
-- Planning mode output for any tool (`--plan` flag)
-
-### Practice Environments
-
-- HTB Academy (education.hackthebox.com)
-- TryHackMe (tryhackme.com)
-- Local lab environments (Docker/VM-based)
-- Past CPTC practice packets
-
-### External References
-
-- MITRE ATT&CK Framework (attack.mitre.org)
-- OWASP Testing Guide (owasp.org)
-- PTES Technical Guidelines (pentest-standard.org)
-
-## Assessment Checklist
-
-Before competition, ensure you can:
-
-### Reconnaissance
-- [ ] Discover live hosts on a network segment
-- [ ] Identify open ports using multiple scan types
-- [ ] Enumerate DNS records and subdomains
-- [ ] Fingerprint services and extract versions
-
-### Credential Attacks
-- [ ] Validate credentials against FTP, HTTP, SMTP
-- [ ] Perform dictionary attacks on password hashes
-- [ ] Identify default/weak credentials
-
-### Payload Operations
-- [ ] Generate reverse shells for multiple platforms
-- [ ] Encode payloads to avoid null bytes
-- [ ] Set up handlers and manage sessions
-
-### Evasion
-- [ ] Understand EDR detection mechanisms
-- [ ] Generate syscall stubs for API bypass
-- [ ] Apply appropriate obfuscation techniques
-
-## Version Information
-
-| Component | Version |
-|-----------|---------|
-| Training Materials | 1.0.0 |
-| Toolkit Version | 1.0.0 |
-| Last Updated | January 2026 |
+- Maintain professionalism at all times
 
 ---
 
-**Remember**: Success in competitions comes from thorough preparation, methodical execution, and continuous learning. Master the fundamentals, practice regularly, and stay curious.
+## Next Steps
 
-Good luck with your training and competitions!
+1. **Verify your environment** using the Quick Start Guide above
+2. **Choose your learning path** based on experience and goals
+3. **Begin with the Glossary** if any terms are unfamiliar
+4. **Complete Lab 01** as your first hands-on exercise
+
+Good luck with your training. Thorough preparation leads to competition success.
+
+---
+
+*Training Materials Version: 1.0.0 | Last Updated: January 2026*
